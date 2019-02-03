@@ -26,7 +26,7 @@ public class Counter {
 	}
 
 	public Map<Integer, Integer> getTestingLabelCounts() {
-		return trainingLabelCounts;
+		return testingLabelCounts;
 	}
 
 	public Integer incrementForLabel(String label, boolean isTesting) {

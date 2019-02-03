@@ -3,6 +3,7 @@ package com.example.demo;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,10 +64,14 @@ public class DartImgGeneratorApplication {
 			String label = evt.getLabel();
 			counter.incrementForLabel(label, isTestImg);
 
+			Integer trainingValues = counter.getTrainingLabelCounts().values().stream().mapToInt(Integer::intValue).sum();
+			Integer testingValues = counter.getTestingLabelCounts().values().stream().mapToInt(Integer::intValue).sum();
+			
+
 			if (count % 50 == 0) {
 				log.info("Generated {} images so far", count);
-				log.info("Training Data : {}", counter.getTrainingLabelCounts());
-				log.info("Testing Data  : {}", counter.getTestingLabelCounts());
+				log.info("Training Data ({}) : {}", trainingValues, counter.getTrainingLabelCounts());
+				log.info("Testing Data  ({}) : {}", testingValues, counter.getTestingLabelCounts());
 			}
 		}
 	}

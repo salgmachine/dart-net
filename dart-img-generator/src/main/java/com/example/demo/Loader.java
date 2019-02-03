@@ -8,11 +8,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.UUID;
 
 import javax.imageio.ImageIO;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
@@ -27,6 +29,9 @@ public class Loader {
 
 	@Autowired
 	private ResourceLoader loader;
+
+	@Autowired
+	private ApplicationEventPublisher publisher;
 
 	public void addWatermark(String prefix, int rotateMin, int rotateMax) {
 
@@ -112,18 +117,14 @@ public class Loader {
 		g.drawImage(image, 0, 0, null);
 		g.drawImage(overlay, x, y, null);
 		String fname = prefix + "_" + uuid + ".png";
-		log.info(" Drawing overlay at x=" + x + " y=" + y + " at rotate=" + rotate + " for " + fname);
+		log.debug(" Drawing overlay at x=" + x + " y=" + y + " at rotate=" + rotate + " for " + fname);
 
 		combined = rotateImage(combined, 360 - rotate);
-
-//			BufferedImage resized = test ? combined
-//					: createResizedCopy(combined, initialWidth / 4, initialWidth / 4, true);
-
 		Path filepath = Paths.get(outPath.toFile().getAbsolutePath(), fname);
 
+		publisher.publishEvent(new ImgWrittenEvent(filepath, new Date(), isTestImg, prefix));
+
 		ImageIO.write(combined, "PNG", filepath.toFile());
-//			System.out.println(
-//					fname + " : File written. Width=" + combined.getWidth() + " Height=" + combined.getHeight());
 	}
 
 	private BufferedImage rotateImage(BufferedImage sourceImage, double angle) {

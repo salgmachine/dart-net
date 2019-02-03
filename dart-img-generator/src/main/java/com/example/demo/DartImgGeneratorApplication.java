@@ -4,19 +4,20 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
 import com.google.common.collect.Lists;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
-import io.reactivex.Scheduler;
 import io.reactivex.schedulers.Schedulers;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @SpringBootApplication
 public class DartImgGeneratorApplication {
 
@@ -44,47 +45,29 @@ public class DartImgGeneratorApplication {
 
 		Lists.partition(observableRuns, 8).forEach(batch -> Observable.zip(batch, (n) -> Boolean.TRUE).blockingFirst());
 
-//		runs.forEach(run -> {
-//			bean.addWatermark(run.getPrefix(), run.getRotateMin(), run.getRotateMax());
-//		});
-
 	}
 
-//	public static BufferedImage createResizedCopy(Image originalImage, int scaledWidth, int scaledHeight,
-//			boolean preserveAlpha) {
-//		System.out.println("resizing...");
-//		int imageType = preserveAlpha ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
-//		BufferedImage scaledBI = new BufferedImage(scaledWidth, scaledHeight, imageType);
-//		Graphics2D g = scaledBI.createGraphics();
-//		if (preserveAlpha) {
-//			g.setComposite(AlphaComposite.Src);
-//		}
-//		g.drawImage(originalImage, 0, 0, scaledWidth, scaledHeight, null);
-//		g.dispose();
-//		return scaledBI;
-//	}
+	@Component
+	public class ImgWrittenEventListener {
 
-//	public static BufferedImage rotateImageByDegrees(BufferedImage img, double angle) {
-//
-//	    Graphics2D g = img.createGraphics();
-//	    g.translate(img.getWidth() / 2, img.getHeight() / 2);
-//	    g.rotate(Math.toRadians(angle));
-////	    g.translate(img.getWidth(), img.getHeight());
-//	    
-//	    
-//	    //-----------------------MODIFIED--------------------------------------
-//	    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON) ;
-//	    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC) ;
-//	    g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY) ;
-//
-//	    g.drawImage(img, 0, 0, img.getWidth(), img.getHeight(), null);
-//	    
-//	    return img;
-//	}
+		private final Logger log = LoggerFactory.getLogger(getClass());
 
-	class Ranges {
-		List<Integer> twentyX = Arrays.asList(-14, -15, -16, -17);
-		List<Integer> twentyY = Arrays.asList(70);
+		@Autowired
+		private Counter counter;
+
+		@EventListener
+		public void onImgWritten(ImgWrittenEvent evt) {
+
+			Integer count = counter.increment();
+			Boolean isTestImg = evt.getIsTestImg();
+			String label = evt.getLabel();
+			counter.incrementForLabel(label, isTestImg);
+
+			if (count % 50 == 0) {
+				log.info("Generated {} images so far", count);
+				log.info("Training Data : {}", counter.getTrainingLabelCounts());
+				log.info("Testing Data  : {}", counter.getTestingLabelCounts());
+			}
+		}
 	}
-
 }

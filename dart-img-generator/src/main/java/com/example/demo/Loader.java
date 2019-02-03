@@ -4,6 +4,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
+import java.awt.image.BufferedImageOp;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,6 +14,8 @@ import java.util.UUID;
 
 import javax.imageio.ImageIO;
 
+import org.imgscalr.Scalr;
+import org.imgscalr.Scalr.Method;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.Resource;
@@ -121,10 +124,14 @@ public class Loader {
 
 		combined = rotateImage(combined, 360 - rotate);
 		Path filepath = Paths.get(outPath.toFile().getAbsolutePath(), fname);
-
 		publisher.publishEvent(new ImgWrittenEvent(filepath, new Date(), isTestImg, prefix));
 
-		ImageIO.write(combined, "PNG", filepath.toFile());
+		final BufferedImage finalImg = resizeImageAndGrayscale(combined);
+		ImageIO.write(finalImg, "PNG", filepath.toFile());
+	}
+
+	private BufferedImage resizeImageAndGrayscale(BufferedImage img) {
+		return Scalr.resize(img, Method.ULTRA_QUALITY, img.getWidth() / 4, img.getHeight() / 4, Scalr.OP_GRAYSCALE);
 	}
 
 	private BufferedImage rotateImage(BufferedImage sourceImage, double angle) {

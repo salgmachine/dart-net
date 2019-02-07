@@ -50,6 +50,8 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.example.demo.RunTracker;
+
 /**
  * Created by tom hanlon on 11/7/16. This code example is featured in this
  * youtube video https://www.youtube.com/watch?v=GLC8CIoHDnI
@@ -87,7 +89,12 @@ public class ConvNet {
 	public static final String DATA_PATH = FilenameUtils.concat(System.getProperty("java.io.tmpdir"), "dl4j_Mnist/");
 
 	public void run(String basepath) throws Exception {
+		if (RunTracker.getRuns().containsKey("deep") && RunTracker.getRuns().get("deep") == true) {
+			return;
+		}
 
+		RunTracker.getRuns().put("deep", true);
+		
 		// Initialize the user interface backend
 		UIServer uiServer = UIServer.getInstance();
 
@@ -215,6 +222,7 @@ public class ConvNet {
 
 		log.info("traininglabels: " + trainingLabels);
 		log.info("testlabels: " + testlabels);
+		RunTracker.getRuns().put("deep", false);
 
 	}
 

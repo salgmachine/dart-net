@@ -1,5 +1,8 @@
 package com.example.demo;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.task.TaskExecutor;
@@ -9,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.nets.AlexNet;
 import com.example.demo.nets.ConvNet;
+import com.example.demo.nets.MnistNet;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,10 +36,11 @@ public class Controller {
 			try {
 				AlexNet alexNet = new AlexNet();
 				alexNet.run(inputpath);
+				RunTracker.getRuns().put("alexnet", false);
 			} catch (Exception e) {
 				log.error("Error running alexnet: {}", e);
+				RunTracker.getRuns().put("alexnet", false);
 			}
-
 		});
 
 		return ResponseEntity.ok().build();
@@ -51,8 +56,10 @@ public class Controller {
 			try {
 				ConvNet net = new ConvNet();
 				net.run(inputpath);
+				RunTracker.getRuns().put("deep", false);
 			} catch (Exception e) {
 				log.error("Error running deep convnet: {}", e);
+				RunTracker.getRuns().put("deep", false);
 			}
 
 		});
@@ -67,10 +74,12 @@ public class Controller {
 
 		executor.execute(() -> {
 			try {
-				ConvNet net = new ConvNet();
+				MnistNet net = new MnistNet();
 				net.run(inputpath);
+				RunTracker.getRuns().put("mnist", false);
 			} catch (Exception e) {
 				log.error("Error running deep convnet: {}", e);
+				RunTracker.getRuns().put("mnist", false);
 			}
 
 		});

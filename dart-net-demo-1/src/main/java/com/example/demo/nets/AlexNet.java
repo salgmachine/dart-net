@@ -63,6 +63,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.convert.DataSizeUnit;
 
+import com.example.demo.RunTracker;
+
 /**
  * Created by tom hanlon on 11/7/16. This code example is featured in this
  * youtube video https://www.youtube.com/watch?v=GLC8CIoHDnI
@@ -94,6 +96,12 @@ public class AlexNet {
 	private static Logger log = LoggerFactory.getLogger(AlexNet.class);
 
 	public void run(String basepath) throws Exception {
+
+		if (RunTracker.getRuns().containsKey("alexnet") && RunTracker.getRuns().get("alexnet") == true) {
+			return;
+		}
+
+		RunTracker.getRuns().put("alexnet", true);
 
 		// Initialize the user interface backend
 		UIServer uiServer = UIServer.getInstance();
@@ -155,7 +163,6 @@ public class AlexNet {
 		String trainingLabels = dataIter.getLabels().toString();
 		log.info("BUILD MODEL");
 
-
 		MultiLayerNetwork model = new MultiLayerNetwork(conf(rngseed, channels, outputNum, height, width));
 		model.init();
 
@@ -206,6 +213,8 @@ public class AlexNet {
 
 		log.info("traininglabels: " + trainingLabels);
 		log.info("testlabels: " + testlabels);
+		
+		RunTracker.getRuns().put("alexnet", false);
 
 	}
 

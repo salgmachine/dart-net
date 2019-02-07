@@ -82,12 +82,6 @@ import com.example.demo.RunTracker;
 public class ConvNet {
 	private static Logger log = LoggerFactory.getLogger(ConvNet.class);
 
-	/** Data URL for downloading */
-	public static final String DATA_URL = "http://github.com/myleott/mnist_png/raw/master/mnist_png.tar.gz";
-
-	/** Location to save and extract the training/testing data */
-	public static final String DATA_PATH = FilenameUtils.concat(System.getProperty("java.io.tmpdir"), "dl4j_Mnist/");
-
 	public void run(String basepath) throws Exception {
 		if (RunTracker.getRuns().containsKey("deep") && RunTracker.getRuns().get("deep") == true) {
 			return;
@@ -228,8 +222,6 @@ public class ConvNet {
 
 	public static MultiLayerConfiguration conf(int numClasses) {
 
-		int[] inputShape = { 1, 625, 625 };
-
 		MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder().seed(System.currentTimeMillis())
 				.activation(Activation.IDENTITY).weightInit(WeightInit.RELU)
 				.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).updater(new Nesterovs(0.005, 0.9))
@@ -237,7 +229,7 @@ public class ConvNet {
 				.inferenceWorkspaceMode(WorkspaceMode.ENABLED).convolutionMode(ConvolutionMode.Same).list()
 				// block 1
 				.layer(0,
-						new ConvolutionLayer.Builder(new int[] { 7, 7 }).name("image_array").nIn(inputShape[0]).nOut(16)
+						new ConvolutionLayer.Builder(new int[] { 7, 7 }).name("image_array").nIn(1).nOut(16)
 								.build())
 				.layer(1, new BatchNormalization.Builder().build())
 				.layer(2, new ConvolutionLayer.Builder(new int[] { 7, 7 }).nIn(16).nOut(16).build())
@@ -284,7 +276,7 @@ public class ConvNet {
 								.activation(Activation.SOFTMAX).weightInit(WeightInit.XAVIER).name("Output")
 								.nOut(numClasses).build())
 
-				.setInputType(InputType.convolutional(inputShape[2], inputShape[1], inputShape[0])).build();
+				.setInputType(InputType.convolutional(96, 96, 1)).build();
 
 		return conf;
 	}

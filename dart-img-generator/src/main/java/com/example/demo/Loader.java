@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
@@ -41,11 +42,14 @@ public class Loader {
 		for (int rotate = rotateMin; rotate <= rotateMax; rotate++) {
 			try {
 
-				Resource boardRes = loader.getResource("classpath:board.png");
+				Resource boardRes = loader.getResource("classpath:board-black.png");
 				Resource watermarkRes = loader.getResource("classpath:watermark.png");
 
 				BufferedImage watermarkImg = ImageIO.read(watermarkRes.getInputStream());
+				watermarkImg = Scalr.resize(watermarkImg, Method.AUTOMATIC, 64, 64);
 
+				final BufferedImage watermark = watermarkImg;
+				
 				BufferedImage boardImg = ImageIO.read(boardRes.getInputStream());
 				boardImg = rotateImage(boardImg, rotate);
 
@@ -68,12 +72,12 @@ public class Loader {
 						final int idx = i;
 						final int deg = rotate;
 						Observable<Boolean> f = Observable.fromCallable(() -> {
-							writeImg(rotatedImg, watermarkImg, w, h, combined, initialWidth, basePointWidth,
+							writeImg(rotatedImg, watermark, w, h, combined, initialWidth, basePointWidth,
 									basePointHeight - idx - 1, prefix, deg, idx);
 							return true;
 						}).subscribeOn(Schedulers.io());
 						Observable<Boolean> n = Observable.fromCallable(() -> {
-							writeImg(rotatedImg, watermarkImg, w, h, combined, initialWidth, basePointWidth,
+							writeImg(rotatedImg, watermark, w, h, combined, initialWidth, basePointWidth,
 									basePointHeight - idx, prefix, deg, idx);
 							return true;
 						}).subscribeOn(Schedulers.io());
@@ -115,10 +119,10 @@ public class Loader {
 		} else {
 			outPath = p;
 		}
-
+		
 		Graphics g = combined.getGraphics();
 		g.drawImage(image, 0, 0, null);
-		g.drawImage(overlay, x, y, null);
+		g.drawImage(overlay, x - 32, y - 32, null);
 		String fname = prefix + "_" + uuid + ".png";
 		log.debug(" Drawing overlay at x=" + x + " y=" + y + " at rotate=" + rotate + " for " + fname);
 
@@ -131,7 +135,7 @@ public class Loader {
 	}
 
 	private BufferedImage resizeImageAndGrayscale(BufferedImage img) {
-		return Scalr.resize(img, Method.ULTRA_QUALITY, img.getWidth() / 4, img.getHeight() / 4, Scalr.OP_GRAYSCALE);
+		return Scalr.resize(img, Method.QUALITY, img.getWidth() / 16, img.getHeight() / 16, Scalr.OP_GRAYSCALE);
 	}
 
 	private BufferedImage rotateImage(BufferedImage sourceImage, double angle) {

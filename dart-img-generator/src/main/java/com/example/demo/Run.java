@@ -9,11 +9,12 @@ public class Run {
 	private final String prefix;
 	private final int rotateMin;
 	private final int rotateMax;
+	private int margin = 1;
 
 	public Run(String prefix, int rotateMin, int rotateMax) {
 		this.prefix = prefix;
-		this.rotateMin = rotateMin;
-		this.rotateMax = rotateMax;
+		this.rotateMin = (rotateMin < 0 ? rotateMin + margin : rotateMin - margin);
+		this.rotateMax = (rotateMax < 0 ? rotateMax + margin : rotateMax - margin);
 	}
 
 	public Run execute(Loader loader) {

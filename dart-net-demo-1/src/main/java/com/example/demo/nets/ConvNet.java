@@ -166,7 +166,7 @@ public class ConvNet {
 		log.info("BUILD MODEL");
 
 		int[] shape = { channels, width, height };
-		MultiLayerNetwork model = new MultiLayerNetwork(conf());
+		MultiLayerNetwork model = new MultiLayerNetwork(conf(outputNum));
 
 		// The Score iteration Listener will log
 		// output to show how well the network is training
@@ -218,10 +218,9 @@ public class ConvNet {
 
 	}
 
-	public static MultiLayerConfiguration conf() {
+	public static MultiLayerConfiguration conf(int numClasses) {
 
 		int[] inputShape = { 1, 625, 625 };
-		int numClasses = 8;
 
 		MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder().seed(System.currentTimeMillis())
 				.activation(Activation.IDENTITY).weightInit(WeightInit.RELU)

@@ -19,6 +19,7 @@ import org.imgscalr.Scalr;
 import org.imgscalr.Scalr.Method;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
@@ -95,16 +96,13 @@ public class Loader {
 		}
 	}
 
-	static final boolean test = true;
-
-	static String getOutputdir() {
-		String outputdir = "/home/salgmachine/Schreibtisch/development/workspace/dart-net/dart-net-demo-1/src/main/resources/images/train/";
-		if (test) {
-			outputdir = "./";
-		}
-		return outputdir;
+	@Autowired
+	private Environment env;
+	
+	private String getOutputdir() {
+		return env.getProperty("dartnet.output", String.class);
 	}
-
+	
 	private void writeImg(BufferedImage image, BufferedImage overlay, int w, int h, BufferedImage combined,
 			int initialWidth, Integer x, Integer y, String prefix, int rotate, int idx) throws IOException {
 		String uuid = UUID.randomUUID().toString();

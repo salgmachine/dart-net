@@ -1,0 +1,194 @@
+Deeplearning4j OOM Exception Encountered for MultiLayerNetwork
+Timestamp:                              2019-02-03 21:40:35.402
+Thread ID                               1
+Thread Name                             main
+
+
+Stack Trace:
+java.lang.OutOfMemoryError: Cannot allocate new LongPointer(8): totalBytes = 106M, physicalBytes = 12488M
+	at org.bytedeco.javacpp.LongPointer.<init>(LongPointer.java:76)
+	at org.bytedeco.javacpp.LongPointer.<init>(LongPointer.java:41)
+	at org.nd4j.linalg.api.buffer.BaseDataBuffer.<init>(BaseDataBuffer.java:385)
+	at org.nd4j.linalg.api.buffer.LongBuffer.<init>(LongBuffer.java:81)
+	at org.nd4j.linalg.api.buffer.factory.DefaultDataBufferFactory.createLong(DefaultDataBufferFactory.java:436)
+	at org.nd4j.linalg.api.buffer.factory.DefaultDataBufferFactory.createLong(DefaultDataBufferFactory.java:431)
+	at org.nd4j.linalg.factory.Nd4j.createBufferDetached(Nd4j.java:1462)
+	at org.nd4j.linalg.api.shape.Shape.createShapeInformation(Shape.java:3223)
+	at org.nd4j.linalg.api.ndarray.BaseShapeInfoProvider.createShapeInformation(BaseShapeInfoProvider.java:94)
+	at org.nd4j.linalg.cpu.nativecpu.DirectShapeInfoProvider.createShapeInformation(DirectShapeInfoProvider.java:92)
+	at org.nd4j.linalg.cpu.nativecpu.DirectShapeInfoProvider.createShapeInformation(DirectShapeInfoProvider.java:78)
+	at org.nd4j.linalg.api.ndarray.BaseNDArray.<init>(BaseNDArray.java:185)
+	at org.nd4j.linalg.cpu.nativecpu.NDArray.<init>(NDArray.java:81)
+	at org.nd4j.linalg.cpu.nativecpu.CpuNDArrayFactory.create(CpuNDArrayFactory.java:299)
+	at org.nd4j.linalg.factory.Nd4j.create(Nd4j.java:3945)
+	at org.nd4j.linalg.api.shape.Shape.newShapeNoCopy(Shape.java:2046)
+	at org.nd4j.linalg.api.shape.Shape.newShapeNoCopy(Shape.java:1930)
+	at org.deeplearning4j.nn.layers.convolution.ConvolutionLayer.preOutput(ConvolutionLayer.java:370)
+	at org.deeplearning4j.nn.layers.convolution.ConvolutionLayer.activate(ConvolutionLayer.java:411)
+	at org.deeplearning4j.nn.layers.AbstractLayer.activate(AbstractLayer.java:259)
+	at org.deeplearning4j.nn.multilayer.MultiLayerNetwork.ffToLayerActivationsInWs(MultiLayerNetwork.java:1057)
+	at org.deeplearning4j.nn.multilayer.MultiLayerNetwork.computeGradientAndScore(MultiLayerNetwork.java:2629)
+	at org.deeplearning4j.nn.multilayer.MultiLayerNetwork.computeGradientAndScore(MultiLayerNetwork.java:2587)
+	at org.deeplearning4j.optimize.solvers.BaseOptimizer.gradientAndScore(BaseOptimizer.java:160)
+	at org.deeplearning4j.optimize.solvers.StochasticGradientDescent.optimize(StochasticGradientDescent.java:63)
+	at org.deeplearning4j.optimize.Solver.optimize(Solver.java:52)
+	at org.deeplearning4j.nn.multilayer.MultiLayerNetwork.fitHelper(MultiLayerNetwork.java:1602)
+	at org.deeplearning4j.nn.multilayer.MultiLayerNetwork.fit(MultiLayerNetwork.java:1521)
+	at org.deeplearning4j.nn.multilayer.MultiLayerNetwork.fit(MultiLayerNetwork.java:1508)
+	at com.example.demo.AlexNet.main(AlexNet.java:166)
+Caused by: java.lang.OutOfMemoryError: Physical memory usage is too high: physicalBytes (12488M) > maxPhysicalBytes (7112M)
+	at org.bytedeco.javacpp.Pointer.deallocator(Pointer.java:584)
+	at org.bytedeco.javacpp.Pointer.init(Pointer.java:124)
+	at org.bytedeco.javacpp.LongPointer.allocateArray(Native Method)
+	at org.bytedeco.javacpp.LongPointer.<init>(LongPointer.java:68)
+	... 29 more
+
+
+========== Memory Information ==========
+----- Version Information -----
+Deeplearning4j Version                  1.0.0-beta3
+Deeplearning4j CUDA                     <not present>
+
+----- System Information -----
+Operating System                        GNU/Linux Ubuntu 18.04.1 LTS
+CPU                                     Intel(R) Core(TM) i7-6700 CPU @ 3.40GHz
+CPU Cores - Physical                    4
+CPU Cores - Logical                     8
+Total System Memory                       15.62 GB (16775245824)
+
+----- ND4J Environment Information -----
+Data Type                               FLOAT
+backend                                 CPU
+blas.vendor                             MKL
+os                                      Linux
+
+----- Memory Configuration -----
+JVM Memory: XMX                            3.47 GB (3728736256)
+JVM Memory: current                      933.50 MB (978845696)
+JavaCPP Memory: Max Bytes                  3.47 GB (3728736256)
+JavaCPP Memory: Max Physical               6.95 GB (7457472512)
+JavaCPP Memory: Current Bytes            106.90 MB (112093839)
+JavaCPP Memory: Current Physical           1.55 GB (1662013440)
+Periodic GC Enabled                     false
+
+----- Workspace Information -----
+Workspaces: # for current thread        2
+Current thread workspaces:
+  Name                      State       Size                          # Cycles            
+  WS_LAYER_WORKING_MEM      CLOSED             0 B                    3                   
+  WS_ALL_LAYERS_ACT         CLOSED       940.08 MB (985743427)        1                   
+Workspaces total size                    940.08 MB (985743427)
+
+----- Network Information -----
+Network # Parameters                    645312
+Parameter Memory                           2.46 MB (2581248)
+Parameter Gradients Memory              <not allocated>
+Updater Number of Elements              643840
+Updater Memory                             2.46 MB (2575360)
+Updater Classes:
+  org.nd4j.linalg.learning.NesterovsUpdater
+  org.nd4j.linalg.learning.NoOpUpdater
+Params + Gradient + Updater Memory         2.46 MB (2575360)
+Iteration Count                         0
+Epoch Count                             0
+Backprop Type                           Standard
+Workspace Mode: Training                ENABLED
+Workspace Mode: Inference               ENABLED
+Number of Layers                        34
+Layer Counts
+  ActivationLayer                         5
+  BatchNormalization                      9
+  ConvolutionLayer                        10
+  DropoutLayer                            4
+  GlobalPoolingLayer                      1
+  OutputLayer                             1
+  SubsamplingLayer                        4
+Layer Parameter Breakdown
+  Idx Name                 Layer Type           Layer # Parameters   Layer Parameter Memory
+  0   image_array          ConvolutionLayer     800                     3.13 KB (3200)   
+  1   layer1               BatchNormalization   64                        256 B          
+  2   layer2               ConvolutionLayer     12560                  49.06 KB (50240)  
+  3   layer3               BatchNormalization   64                        256 B          
+  4   layer4               ActivationLayer      0                           0 B          
+  5   layer5               SubsamplingLayer     0                           0 B          
+  6   layer6               DropoutLayer         0                           0 B          
+  7   layer7               ConvolutionLayer     12832                  50.13 KB (51328)  
+  8   layer8               BatchNormalization   128                       512 B          
+  9   layer9               ConvolutionLayer     25632                 100.13 KB (102528) 
+  10  layer10              BatchNormalization   128                       512 B          
+  11  layer11              ActivationLayer      0                           0 B          
+  12  layer12              SubsamplingLayer     0                           0 B          
+  13  layer13              DropoutLayer         0                           0 B          
+  14  layer14              ConvolutionLayer     18496                  72.25 KB (73984)  
+  15  layer15              BatchNormalization   256                        1 KB (1024)   
+  16  layer16              ConvolutionLayer     36928                 144.25 KB (147712) 
+  17  layer17              BatchNormalization   256                        1 KB (1024)   
+  18  layer18              ActivationLayer      0                           0 B          
+  19  layer19              SubsamplingLayer     0                           0 B          
+  20  layer20              DropoutLayer         0                           0 B          
+  21  layer21              ConvolutionLayer     73856                 288.50 KB (295424) 
+  22  layer22              BatchNormalization   512                        2 KB (2048)   
+  23  layer23              ConvolutionLayer     147584                576.50 KB (590336) 
+  24  layer24              BatchNormalization   512                        2 KB (2048)   
+  25  layer25              ActivationLayer      0                           0 B          
+  26  layer26              SubsamplingLayer     0                           0 B          
+  27  layer27              DropoutLayer         0                           0 B          
+  28  layer28              ConvolutionLayer     295168                  1.13 MB (1180672)
+  29  layer29              BatchNormalization   1024                       4 KB (4096)   
+  30  layer30              ConvolutionLayer     18440                  72.03 KB (73760)  
+  31  layer31              GlobalPoolingLayer   0                           0 B          
+  32  layer32              ActivationLayer      0                           0 B          
+  33  Output               OutputLayer          72                        288 B          
+
+----- Layer Helpers - Memory Use -----
+Total Helper Count                      0
+Helper Count w/ Memory                  0
+Total Helper Persistent Memory Use             0 B
+
+----- Network Activations: Inferred Activation Shapes -----
+Current Minibatch Size                  100
+Input Shape                             [100, 1, 191, 192]
+Idx Name                 Layer Type           Activations Type                           Activations Shape    # Elements   Memory      
+0   image_array          ConvolutionLayer     InputTypeConvolutional(h=191,w=192,c=16)   [100, 16, 191, 192]  58675200      223.83 MB (234700800)
+1   layer1               BatchNormalization   InputTypeConvolutional(h=191,w=192,c=16)   [100, 16, 191, 192]  58675200      223.83 MB (234700800)
+2   layer2               ConvolutionLayer     InputTypeConvolutional(h=191,w=192,c=16)   [100, 16, 191, 192]  58675200      223.83 MB (234700800)
+3   layer3               BatchNormalization   InputTypeConvolutional(h=191,w=192,c=16)   [100, 16, 191, 192]  58675200      223.83 MB (234700800)
+4   layer4               ActivationLayer      InputTypeConvolutional(h=191,w=192,c=16)   [100, 16, 191, 192]  58675200      223.83 MB (234700800)
+5   layer5               SubsamplingLayer     InputTypeConvolutional(h=96,w=96,c=16)     [100, 16, 96, 96]    14745600       56.25 MB (58982400)
+6   layer6               DropoutLayer         InputTypeConvolutional(h=96,w=96,c=16)     [100, 16, 96, 96]    14745600       56.25 MB (58982400)
+7   layer7               ConvolutionLayer     InputTypeConvolutional(h=96,w=96,c=32)     [100, 32, 96, 96]    29491200      112.50 MB (117964800)
+8   layer8               BatchNormalization   InputTypeConvolutional(h=96,w=96,c=32)     [100, 32, 96, 96]    29491200      112.50 MB (117964800)
+9   layer9               ConvolutionLayer     InputTypeConvolutional(h=96,w=96,c=32)     [100, 32, 96, 96]    29491200      112.50 MB (117964800)
+10  layer10              BatchNormalization   InputTypeConvolutional(h=96,w=96,c=32)     [100, 32, 96, 96]    29491200      112.50 MB (117964800)
+11  layer11              ActivationLayer      InputTypeConvolutional(h=96,w=96,c=32)     [100, 32, 96, 96]    29491200      112.50 MB (117964800)
+12  layer12              SubsamplingLayer     InputTypeConvolutional(h=48,w=48,c=32)     [100, 32, 48, 48]    7372800        28.13 MB (29491200)
+13  layer13              DropoutLayer         InputTypeConvolutional(h=48,w=48,c=32)     [100, 32, 48, 48]    7372800        28.13 MB (29491200)
+14  layer14              ConvolutionLayer     InputTypeConvolutional(h=48,w=48,c=64)     [100, 64, 48, 48]    14745600       56.25 MB (58982400)
+15  layer15              BatchNormalization   InputTypeConvolutional(h=48,w=48,c=64)     [100, 64, 48, 48]    14745600       56.25 MB (58982400)
+16  layer16              ConvolutionLayer     InputTypeConvolutional(h=48,w=48,c=64)     [100, 64, 48, 48]    14745600       56.25 MB (58982400)
+17  layer17              BatchNormalization   InputTypeConvolutional(h=48,w=48,c=64)     [100, 64, 48, 48]    14745600       56.25 MB (58982400)
+18  layer18              ActivationLayer      InputTypeConvolutional(h=48,w=48,c=64)     [100, 64, 48, 48]    14745600       56.25 MB (58982400)
+19  layer19              SubsamplingLayer     InputTypeConvolutional(h=24,w=24,c=64)     [100, 64, 24, 24]    3686400        14.06 MB (14745600)
+20  layer20              DropoutLayer         InputTypeConvolutional(h=24,w=24,c=64)     [100, 64, 24, 24]    3686400        14.06 MB (14745600)
+21  layer21              ConvolutionLayer     InputTypeConvolutional(h=24,w=24,c=128)    [100, 128, 24, 24]   7372800        28.13 MB (29491200)
+22  layer22              BatchNormalization   InputTypeConvolutional(h=24,w=24,c=128)    [100, 128, 24, 24]   7372800        28.13 MB (29491200)
+23  layer23              ConvolutionLayer     InputTypeConvolutional(h=24,w=24,c=128)    [100, 128, 24, 24]   7372800        28.13 MB (29491200)
+24  layer24              BatchNormalization   InputTypeConvolutional(h=24,w=24,c=128)    [100, 128, 24, 24]   7372800        28.13 MB (29491200)
+25  layer25              ActivationLayer      InputTypeConvolutional(h=24,w=24,c=128)    [100, 128, 24, 24]   7372800        28.13 MB (29491200)
+26  layer26              SubsamplingLayer     InputTypeConvolutional(h=12,w=12,c=128)    [100, 128, 12, 12]   1843200         7.03 MB (7372800)
+27  layer27              DropoutLayer         InputTypeConvolutional(h=12,w=12,c=128)    [100, 128, 12, 12]   1843200         7.03 MB (7372800)
+28  layer28              ConvolutionLayer     InputTypeConvolutional(h=12,w=12,c=256)    [100, 256, 12, 12]   3686400        14.06 MB (14745600)
+29  layer29              BatchNormalization   InputTypeConvolutional(h=12,w=12,c=256)    [100, 256, 12, 12]   3686400        14.06 MB (14745600)
+30  layer30              ConvolutionLayer     InputTypeConvolutional(h=12,w=12,c=8)      [100, 8, 12, 12]     115200           450 KB (460800)
+31  layer31              GlobalPoolingLayer   InputTypeFeedForward(8)                    [100, 8]             800             3.13 KB (3200)
+32  layer32              ActivationLayer      InputTypeFeedForward(8)                    [100, 8]             800             3.13 KB (3200)
+33  Output               OutputLayer          InputTypeFeedForward(8)                    [100, 8]             800             3.13 KB (3200)
+Total Activations Memory                   2.29 GB (2456841600)
+Total Activations Memory (per ex)         23.43 MB (24568416)
+Total Activation Gradient Mem.             2.30 GB (2471507200)
+Total Activation Gradient Mem. (per ex)   23.57 MB (24715072)
+
+----- Network Training Listeners -----
+Number of Listeners                     2
+Listener 0                              ScoreIterationListener(5)
+Listener 1                              org.deeplearning4j.ui.stats.StatsListener@5583098b

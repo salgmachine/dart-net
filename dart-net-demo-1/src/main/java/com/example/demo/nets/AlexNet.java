@@ -1,6 +1,9 @@
 package com.example.demo.nets;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -120,8 +123,8 @@ public class AlexNet {
 		int channels = 1;
 		int rngseed = 123;
 		Random randNumGen = new Random(rngseed);
-		int batchSize = 1;
-		int outputNum = 8;
+		int batchSize = 16;
+		int outputNum = 20;
 
 		// Define the File Paths
 		File modelData = new File(basepath + "/model");
@@ -166,7 +169,11 @@ public class AlexNet {
 		MultiLayerNetwork model = new MultiLayerNetwork(conf(rngseed, channels, outputNum, height, width));
 		model.init();
 
-		ModelSerializer.writeModel(model, modelData + "/deep-model.json", true);
+//		Path mdlPath = Paths.get(modelData + "/deep-model.json");
+//		if (!Files.exists(mdlPath)) {
+//			Files.createFile(mdlPath);
+//		}
+////		ModelSerializer.writeModel(model, modelData + "/deep-model.json", true);
 
 		// The Score iteration Listener will log
 		// output to show how well the network is training
@@ -213,7 +220,7 @@ public class AlexNet {
 
 		log.info("traininglabels: " + trainingLabels);
 		log.info("testlabels: " + testlabels);
-		
+
 		RunTracker.getRuns().put("alexnet", false);
 
 	}
@@ -270,7 +277,7 @@ public class AlexNet {
 
 		MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder().seed(System.currentTimeMillis())
 				.activation(Activation.IDENTITY).weightInit(WeightInit.RELU)
-				.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).updater(new Nesterovs(0.1, 0.9))
+				.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).updater(new Nesterovs(0.0001,0.9))
 				.cacheMode(CacheMode.NONE).trainingWorkspaceMode(WorkspaceMode.ENABLED)
 				.inferenceWorkspaceMode(WorkspaceMode.ENABLED).convolutionMode(ConvolutionMode.Same).list()
 				// block 1
@@ -334,10 +341,10 @@ public class AlexNet {
 																														// Configuration
 				.list() // For configuring MultiLayerNetwork we call the list method
 				.layer(0,
-						new DenseLayer.Builder().nIn(channels * height * width).nOut(100).weightInit(WeightInit.XAVIER)
+						new DenseLayer.Builder().nIn(channels * height * width).nOut((channels * height * width) * 4).weightInit(WeightInit.XAVIER)
 								.activation(Activation.RELU).build()) // Configuring Layers
 				.layer(1,
-						new OutputLayer.Builder().nIn(100).nOut(numLabels).weightInit(WeightInit.XAVIER)
+						new OutputLayer.Builder().nOut(numLabels).weightInit(WeightInit.XAVIER)
 								.activation(Activation.SOFTMAX).build())
 				.pretrain(false).backprop(true) // Pretraining and Backprop Configuration
 				.build(); // Building Configuration

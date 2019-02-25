@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.nets.AlexNet;
 import com.example.demo.nets.ConvNet;
 import com.example.demo.nets.MnistNet;
+import com.example.demo.nets.SimpleCNN;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,6 +26,26 @@ public class Controller {
 
 	@Autowired
 	private TaskExecutor executor;
+
+	@GetMapping("/simple")
+	public ResponseEntity<?> simple() throws Exception {
+		String inputpath = env.getProperty("dartnet.input", String.class);
+		log.info("REST Request to run SimpleCNN");
+		log.info("Using input base path {}", inputpath);
+
+		executor.execute(() -> {
+			try {
+				SimpleCNN c = new SimpleCNN();
+				c.run(inputpath);
+				RunTracker.getRuns().put("SimpleCNN", false);
+			} catch (Exception e) {
+				log.error("Error running alexnet: {}", e);
+				RunTracker.getRuns().put("SimpleCNN", false);
+			}
+		});
+
+		return ResponseEntity.ok().build();
+	}
 
 	@GetMapping("/alexnet")
 	public ResponseEntity<?> alexnet() throws Exception {

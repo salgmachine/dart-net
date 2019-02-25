@@ -1,6 +1,11 @@
 package com.example.demo.nets;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Optional;
 import java.util.Random;
 
 import org.apache.commons.io.FilenameUtils;
@@ -31,6 +36,8 @@ import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
 import org.deeplearning4j.nn.conf.layers.ConvolutionLayer.AlgoMode;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
+import org.deeplearning4j.optimize.listeners.Checkpoint;
+import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
@@ -88,7 +95,7 @@ public class ConvNet {
 		}
 
 		RunTracker.getRuns().put("deep", true);
-		
+
 		// Initialize the user interface backend
 		UIServer uiServer = UIServer.getInstance();
 
@@ -109,8 +116,8 @@ public class ConvNet {
 		int channels = 1;
 		int rngseed = new Random().nextInt();
 		Random randNumGen = new Random(rngseed);
-		int batchSize = 1;
-		int outputNum = 20;
+		int batchSize = 8;
+		int outputNum = 2;
 
 		/*
 		 * This class downloadData() downloads the data stores the data in java's tmpdir
@@ -121,8 +128,8 @@ public class ConvNet {
 //    downloadData();
 
 		// Define the File Paths
-		File trainData = new File(basepath + "/train");
-		File testData = new File(basepath + "/test");
+		File trainData = new File(basepath + "/train/13_pair");
+		File testData = new File(basepath + "/test/13_pair");
 
 		// Define the FileSplit(PATH, ALLOWED FORMATS,random)
 		FileSplit train = new FileSplit(trainData, NativeImageLoader.ALLOWED_FORMATS, randNumGen);
@@ -167,11 +174,39 @@ public class ConvNet {
 		log.info("BUILD MODEL");
 
 		int[] shape = { channels, width, height };
-		MultiLayerNetwork model = new MultiLayerNetwork(conf(outputNum));
+		MultiLayerNetwork model = new MultiLayerNetwork(conf(outputNum, height, width, channels));
+
+		Path modelBasepath = Paths.get(basepath + "/model");
+
+		if (!Files.exists(modelBasepath))
+			Files.createDirectories(modelBasepath);
+
+		Optional<Path> existingCheckpoint = Files.list(modelBasepath)
+				.filter(p -> p.toFile().getName().contains("MultiLayerNetwork.zip")).max((p1, p2) -> {
+					try {
+						Long c1 = Files.readAttributes(p1, BasicFileAttributes.class).creationTime().toMillis();
+						Long c2 = Files.readAttributes(p2, BasicFileAttributes.class).creationTime().toMillis();
+						return c1.compareTo(c2);
+					} catch (Exception e) {
+						return 0;
+					}
+				});
+
+		if (existingCheckpoint.isPresent()) {
+			MultiLayerNetwork restoreMultiLayerNetwork = ModelSerializer
+					.restoreMultiLayerNetwork(existingCheckpoint.get().toFile());
+			if (restoreMultiLayerNetwork != null) {
+				log.info("Loaded network from last checkpoint file ... ");
+				model = restoreMultiLayerNetwork;
+			}
+		}
+
+		CheckpointListener checkpointlistener = new CheckpointListener.Builder(basepath + "/model").logSaving(true)
+				.deleteExisting(true).keepLast(3).saveEveryEpoch().saveEveryNIterations(50).build();
 
 		// The Score iteration Listener will log
 		// output to show how well the network is training
-		model.setListeners(new ScoreIterationListener(10), new StatsListener(statsStorage));
+		model.setListeners(new ScoreIterationListener(10), new StatsListener(statsStorage), checkpointlistener);
 
 		log.info("TRAIN MODEL");
 		for (int i = 0; i < 2; i++) {
@@ -209,7 +244,7 @@ public class ConvNet {
 			// with the labels from the RecordReader
 			eval.eval(next.getLabels(), output);
 		}
-		
+
 		ModelSerializer.writeModel(model, new File("convnet-model.zip"), true);
 
 		log.info("eval stats " + eval.stats());
@@ -220,28 +255,28 @@ public class ConvNet {
 
 	}
 
-	public static MultiLayerConfiguration conf(int numClasses) {
+	public static MultiLayerConfiguration conf(int numClasses, int height, int width, int channels) {
 
-		MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder().seed(System.currentTimeMillis())
+		MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder().seed(123L)
 				.activation(Activation.IDENTITY).weightInit(WeightInit.RELU)
 				.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).updater(new Nesterovs(0.005, 0.9))
 				.cacheMode(CacheMode.NONE).trainingWorkspaceMode(WorkspaceMode.ENABLED)
 				.inferenceWorkspaceMode(WorkspaceMode.ENABLED).convolutionMode(ConvolutionMode.Same).list()
 				// block 1
 				.layer(0,
-						new ConvolutionLayer.Builder(new int[] { 7, 7 }).name("image_array").nIn(1).nOut(16)
+						new ConvolutionLayer.Builder(new int[] { 5, 5 }).name("image_array").nIn(height * width * channels).nOut(16)
 								.build())
 				.layer(1, new BatchNormalization.Builder().build())
-				.layer(2, new ConvolutionLayer.Builder(new int[] { 7, 7 }).nIn(16).nOut(16).build())
+				.layer(2, new ConvolutionLayer.Builder(new int[] { 5, 5  }).nIn(16).nOut(16).build())
 				.layer(3, new BatchNormalization.Builder().build())
 				.layer(4, new ActivationLayer.Builder().activation(Activation.RELU).build())
 				.layer(5, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.AVG, new int[] { 2, 2 }).build())
 				.layer(6, new DropoutLayer.Builder(0.5).build())
 
 				// block 2
-				.layer(7, new ConvolutionLayer.Builder(new int[] { 5, 5 }).nOut(32).build())
+				.layer(7, new ConvolutionLayer.Builder(new int[] { 3, 3 }).nOut(32).build())
 				.layer(8, new BatchNormalization.Builder().build())
-				.layer(9, new ConvolutionLayer.Builder(new int[] { 5, 5 }).nOut(32).build())
+				.layer(9, new ConvolutionLayer.Builder(new int[] { 3, 3 }).nOut(32).build())
 				.layer(10, new BatchNormalization.Builder().build())
 				.layer(11, new ActivationLayer.Builder().activation(Activation.RELU).build())
 				.layer(12, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.AVG, new int[] { 2, 2 }).build())
@@ -275,8 +310,7 @@ public class ConvNet {
 						new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
 								.activation(Activation.SOFTMAX).weightInit(WeightInit.XAVIER).name("Output")
 								.nOut(numClasses).build())
-
-				.setInputType(InputType.convolutional(96, 96, 1)).build();
+				.setInputType(InputType.convolutional(height, width, channels)).build();
 
 		return conf;
 	}

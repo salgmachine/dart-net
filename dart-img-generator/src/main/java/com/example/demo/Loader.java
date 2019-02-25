@@ -133,7 +133,7 @@ public class Loader {
 	}
 
 	private BufferedImage resizeImageAndGrayscale(BufferedImage img) {
-		return Scalr.resize(img, Method.QUALITY, img.getWidth() / 16, img.getHeight() / 16, Scalr.OP_GRAYSCALE);
+		return Scalr.resize(img, Method.AUTOMATIC, img.getWidth() / 4, img.getHeight() / 4);
 	}
 
 	private BufferedImage rotateImage(BufferedImage sourceImage, double angle) {

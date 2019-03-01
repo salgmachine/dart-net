@@ -9,7 +9,7 @@ public class Run {
 	private final String prefix;
 	private final int rotateMin;
 	private final int rotateMax;
-	private int margin = 1;
+	private int margin = 0;
 
 	public Run(String prefix, int rotateMin, int rotateMax) {
 		this.prefix = prefix;

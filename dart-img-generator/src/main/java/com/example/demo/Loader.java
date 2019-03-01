@@ -11,7 +11,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
 
@@ -23,6 +27,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
+
+import com.google.common.collect.Lists;
 
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
@@ -40,69 +46,71 @@ public class Loader {
 
 	public void addWatermark(String prefix, int rotateMin, int rotateMax) {
 
-		for (int rotate = rotateMin; rotate <= rotateMax; rotate++) {
-			try {
+		List<Observable<Boolean>> collect = IntStream.range(rotateMin, rotateMax + 1).boxed().map(rot -> {
+			return Observable.fromCallable(() -> {
+				try {
 
-				Resource boardRes = loader.getResource("classpath:board-black.png");
-				Resource watermarkRes = loader.getResource("classpath:watermark.png");
+					Resource boardRes = loader.getResource("classpath:board3.png");
+					Resource watermarkRes = loader.getResource("classpath:dart3.png");
 
-				BufferedImage watermarkImg = ImageIO.read(watermarkRes.getInputStream());
-				watermarkImg = Scalr.resize(watermarkImg, Method.AUTOMATIC, 64, 64);
+					BufferedImage watermarkImg = ImageIO.read(watermarkRes.getInputStream());
+					// watermarkImg = Scalr.resize(watermarkImg, Method.AUTOMATIC, 64, 64);
 
-				final BufferedImage watermark = watermarkImg;
-				
-				BufferedImage boardImg = ImageIO.read(boardRes.getInputStream());
-				boardImg = rotateImage(boardImg, rotate);
+					final BufferedImage watermark = watermarkImg;
 
-				final BufferedImage rotatedImg = boardImg;
+					BufferedImage boardImg = ImageIO.read(boardRes.getInputStream());
+					boardImg = rotateImage(boardImg, rot);
 
-				// create the new image, canvas size is the max. of both image sizes
-				int w = Math.max(boardImg.getWidth(), watermarkImg.getWidth());
-				int h = Math.max(boardImg.getHeight(), watermarkImg.getHeight());
-				BufferedImage combined = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+					final BufferedImage rotatedImg = boardImg;
 
-				int initialWidth = boardImg.getWidth() / 2;
+					// create the new image, canvas size is the max. of both image sizes
+					int w = Math.max(boardImg.getWidth(), watermarkImg.getWidth());
+					int h = Math.max(boardImg.getHeight(), watermarkImg.getHeight());
+					BufferedImage combined = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 
-				int basePointHeight = h / 2;
-				int basePointWidth = w / 2;
-				int initialHeightOffset = 80;
+					int initialWidth = boardImg.getWidth() / 2;
 
-				// i = 580
-				for (int i = 80; i <= 580; i++) {
-					if (i % 2 == 0) {
+					int basePointHeight = h / 2;
+					int basePointWidth = w / 2;
+					int initialHeightOffset = 80;
+
+//					for (int i = 180; i <= 680; i++) {
+
+					final int r = rot;
+
+					int start = 180;
+					int max = 680;
+					
+					for (int i = start; i <= max; i++) {
 						final int idx = i;
-						final int deg = rotate;
 						Observable<Boolean> f = Observable.fromCallable(() -> {
-							writeImg(rotatedImg, watermark, w, h, combined, initialWidth, basePointWidth,
-									basePointHeight - idx - 1, prefix, deg, idx);
+							writeImg(rotatedImg, watermark, w, h, combined, initialWidth, basePointWidth, idx, prefix,
+									r, idx);
 							return true;
 						}).subscribeOn(Schedulers.io());
-						Observable<Boolean> n = Observable.fromCallable(() -> {
-							writeImg(rotatedImg, watermark, w, h, combined, initialWidth, basePointWidth,
-									basePointHeight - idx, prefix, deg, idx);
-							return true;
-						}).subscribeOn(Schedulers.io());
-
-						Observable.zip(f, n, (first, next) -> {
-							return next;
-						}).blockingSubscribe();
+						f.blockingFirst();
 					}
 
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
+				return true;
+			}).subscribeOn(Schedulers.io());
+		}).collect(Collectors.toList());
 
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+		Lists.partition(collect, 4).forEach(obs -> Observable.zip(obs, n -> {
+			return true;
+		}).blockingFirst());
+
 	}
 
 	@Autowired
 	private Environment env;
-	
+
 	private String getOutputdir() {
 		return env.getProperty("dartnet.output", String.class);
 	}
-	
+
 	private void writeImg(BufferedImage image, BufferedImage overlay, int w, int h, BufferedImage combined,
 			int initialWidth, Integer x, Integer y, String prefix, int rotate, int idx) throws IOException {
 		String uuid = UUID.randomUUID().toString();
@@ -117,12 +125,20 @@ public class Loader {
 		} else {
 			outPath = p;
 		}
-		
+
 		Graphics g = combined.getGraphics();
 		g.drawImage(image, 0, 0, null);
-		g.drawImage(overlay, x - 32, y - 32, null);
-		String fname = prefix + "_" + uuid + ".png";
-		log.debug(" Drawing overlay at x=" + x + " y=" + y + " at rotate=" + rotate + " for " + fname);
+		
+		
+		int drawOverlayAtX = x - (overlay.getWidth() / 2);
+		int drawOverlayAtY = y - overlay.getHeight();
+		
+		int rgb = image.getRGB(drawOverlayAtX, drawOverlayAtY);
+		
+		g.drawImage(overlay, drawOverlayAtX, drawOverlayAtY, null);
+		String fname = prefix + "_(x" + x + " y" + y + " rot" + rotate + " color"+rgb+")_" + UUID.randomUUID().toString() + ".png";
+
+		log.info(" Drawing overlay at x=" + x + " y=" + y + " at rotate=" + rotate + " for " + fname);
 
 		combined = rotateImage(combined, 360 - rotate);
 		Path filepath = Paths.get(outPath.toFile().getAbsolutePath(), fname);
@@ -133,7 +149,7 @@ public class Loader {
 	}
 
 	private BufferedImage resizeImageAndGrayscale(BufferedImage img) {
-		return Scalr.resize(img, Method.AUTOMATIC, img.getWidth() / 4, img.getHeight() / 4);
+		return Scalr.resize(img, Method.AUTOMATIC, (int) (img.getWidth() * 0.5), (int) (img.getHeight() * 0.5));
 	}
 
 	private BufferedImage rotateImage(BufferedImage sourceImage, double angle) {

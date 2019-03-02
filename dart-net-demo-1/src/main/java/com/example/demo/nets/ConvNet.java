@@ -111,13 +111,13 @@ public class ConvNet {
 		/*
 		 * image information 28 * 28 grayscale grayscale implies single channel
 		 */
-		int height = 96;
-		int width = 96;
-		int channels = 1;
+		int height = 750;
+		int width = 750;
+		int channels = 3;
 		int rngseed = new Random().nextInt();
 		Random randNumGen = new Random(rngseed);
 		int batchSize = 8;
-		int outputNum = 2;
+		int outputNum = 20;
 
 		/*
 		 * This class downloadData() downloads the data stores the data in java's tmpdir

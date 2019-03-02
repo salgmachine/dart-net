@@ -2,6 +2,7 @@ package com.example.demo.nets.web;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Random;
@@ -53,17 +54,17 @@ public class TestNetsApi {
 
 	@GetMapping("/googlenet")
 	public void testgoogleNet() throws Exception {
-		
+
 		int[][] shape = new int[3][3];
-		shape[0] = new int[]{3, 750, 750};
-		
+		shape[0] = new int[] { 3, 750, 750 };
+
 		// runs into NAN
 		GoogLeNet lnet = new GoogLeNet(20, 123, WorkspaceMode.ENABLED);
 		lnet.setInputShape(shape);
 		ComputationGraph init = new ComputationGraph(lnet.conf());
 		runComputationGraph(init, 10000);
 	}
-	
+
 	@GetMapping("/vgg16")
 	public void testVGG16() throws Exception {
 		// runs into NAN
@@ -200,6 +201,19 @@ public class TestNetsApi {
 			this.classes = classes;
 		}
 
+		private Path modelDirectory() {
+			Path path = Paths.get(basepath, "models");
+			if (Files.exists(path) == false) {
+				try {
+					Files.createDirectories(path);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			return path;
+		}
+
 		private void initReaders() throws IOException {
 			File trainData = new File(basepath + "/train");
 			File testData = new File(basepath + "/test");
@@ -246,7 +260,7 @@ public class TestNetsApi {
 		}
 
 		private CheckpointListener checkpointListener() {
-			return new CheckpointListener.Builder(new File(basepath + "/models")).keepLast(3).saveEveryNIterations(1000)
+			return new CheckpointListener.Builder(modelDirectory().toFile()).keepLast(3).saveEveryNIterations(1000)
 					.build();
 		}
 

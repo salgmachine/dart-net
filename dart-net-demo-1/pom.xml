@@ -114,6 +114,7 @@
 	</profiles>
 
 	<build>
+		<finalName>dart-net-demo</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

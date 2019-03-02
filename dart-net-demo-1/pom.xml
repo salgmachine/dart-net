@@ -102,12 +102,13 @@
 					<artifactId>nd4j-cuda-10.0-platform</artifactId>
 					<version>1.0.0-beta3</version>
 				</dependency>
+				<!-- https://mvnrepository.com/artifact/org.bytedeco.javacpp-presets/cuda -->
 				<dependency>
 					<groupId>org.bytedeco.javacpp-presets</groupId>
 					<artifactId>cuda</artifactId>
-					<version>9.2-7.1-1.4.2</version>
-					<classifier>linux-x86_64-redist</classifier>
+					<version>10.0-7.4-1.4.4</version>
 				</dependency>
+
 			</dependencies>
 		</profile>
 	</profiles>

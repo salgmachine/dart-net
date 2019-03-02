@@ -128,8 +128,8 @@ public class ConvNet {
 //    downloadData();
 
 		// Define the File Paths
-		File trainData = new File(basepath + "/train/13_pair");
-		File testData = new File(basepath + "/test/13_pair");
+		File trainData = new File(basepath + "/train");
+		File testData = new File(basepath + "/test");
 
 		// Define the FileSplit(PATH, ALLOWED FORMATS,random)
 		FileSplit train = new FileSplit(trainData, NativeImageLoader.ALLOWED_FORMATS, randNumGen);

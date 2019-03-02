@@ -15,6 +15,7 @@ import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.datasets.iterator.EarlyTerminationDataSetIterator;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
+import org.deeplearning4j.nn.conf.layers.ConvolutionLayer.AlgoMode;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
@@ -50,7 +51,7 @@ public class TestNetsApi {
 	@GetMapping("/xceptionnet")
 	public void testXceptionNet() throws Exception {
 		// 121 layer oO .. produces high load even on single batches
-		Xception build = org.deeplearning4j.zoo.model.Xception.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
+		Xception build = org.deeplearning4j.zoo.model.Xception.builder().seed(123).inputShape(new int[] { 3, 750, 750 }).cudnnAlgoMode(AlgoMode.PREFER_FASTEST)
 				.numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 10000);
@@ -58,7 +59,7 @@ public class TestNetsApi {
 
 	@GetMapping("/squeezenet")
 	public void testSqueezeNet() throws Exception {
-		SqueezeNet build = org.deeplearning4j.zoo.model.SqueezeNet.builder().seed(123)
+		SqueezeNet build = org.deeplearning4j.zoo.model.SqueezeNet.builder().seed(123).cudnnAlgoMode(AlgoMode.PREFER_FASTEST)
 				.inputShape(new int[] { 3, 750, 750 }).numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 10000);
@@ -67,7 +68,7 @@ public class TestNetsApi {
 	@GetMapping("/lenet")
 	public void testLeNet() throws Exception {
 		// converges pretty fast
-		LeNet build = org.deeplearning4j.zoo.model.LeNet.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
+		LeNet build = org.deeplearning4j.zoo.model.LeNet.builder().seed(123).inputShape(new int[] { 3, 750, 750 }).cudnnAlgoMode(AlgoMode.PREFER_FASTEST)
 				.numClasses(20).build();
 		MultiLayerConfiguration net = build.conf();
 		runMultiLayerConfiguration(net, 10000);
@@ -75,7 +76,7 @@ public class TestNetsApi {
 
 	@GetMapping("/darknet")
 	public void testDarknet() throws Exception {
-		Darknet19 build = org.deeplearning4j.zoo.model.Darknet19.builder().seed(123)
+		Darknet19 build = org.deeplearning4j.zoo.model.Darknet19.builder().seed(123).cudnnAlgoMode(AlgoMode.PREFER_FASTEST)
 				.inputShape(new int[] { 3, 750, 750 }).numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 10000);

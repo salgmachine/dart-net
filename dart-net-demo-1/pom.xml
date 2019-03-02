@@ -94,7 +94,7 @@
 			<dependencies>
 				<dependency>
 					<groupId>org.nd4j</groupId>
-					<artifactId>nd4j-cuda-9.2</artifactId>
+					<artifactId>nd4j-cuda-10.0-platform</artifactId>
 					<version>1.0.0-beta3</version>
 				</dependency>
 			</dependencies>

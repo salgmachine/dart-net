@@ -15,6 +15,7 @@ import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.datasets.iterator.EarlyTerminationDataSetIterator;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
+import org.deeplearning4j.nn.conf.WorkspaceMode;
 import org.deeplearning4j.nn.conf.layers.ConvolutionLayer.AlgoMode;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
@@ -26,6 +27,8 @@ import org.deeplearning4j.ui.storage.FileStatsStorage;
 import org.deeplearning4j.zoo.model.Darknet19;
 import org.deeplearning4j.zoo.model.LeNet;
 import org.deeplearning4j.zoo.model.SqueezeNet;
+import org.deeplearning4j.zoo.model.VGG16;
+import org.deeplearning4j.zoo.model.VGG19;
 import org.deeplearning4j.zoo.model.Xception;
 import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -48,19 +51,51 @@ public class TestNetsApi {
 	@Autowired
 	private Environment env;
 
+	@GetMapping("/googlenet")
+	public void testgoogleNet() throws Exception {
+		
+		int[][] shape = new int[3][3];
+		shape[0] = new int[]{3, 750, 750};
+		
+		// runs into NAN
+		GoogLeNet lnet = new GoogLeNet(20, 123, WorkspaceMode.ENABLED);
+		lnet.setInputShape(shape);
+		ComputationGraph init = new ComputationGraph(lnet.conf());
+		runComputationGraph(init, 10000);
+	}
+	
+	@GetMapping("/vgg16")
+	public void testVGG16() throws Exception {
+		// runs into NAN
+		VGG16 build = org.deeplearning4j.zoo.model.VGG16.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
+				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).numClasses(20).build();
+		ComputationGraph init = build.init();
+		runComputationGraph(init, 10000);
+	}
+
+	@GetMapping("/vgg19")
+	public void testVGG19() throws Exception {
+		// runs into NAN
+		VGG19 build = org.deeplearning4j.zoo.model.VGG19.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
+				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).numClasses(20).build();
+		ComputationGraph init = build.init();
+		runComputationGraph(init, 10000);
+
+	}
+
 	@GetMapping("/xceptionnet")
 	public void testXceptionNet() throws Exception {
 		// 121 layer oO .. produces high load even on single batches
-		Xception build = org.deeplearning4j.zoo.model.Xception.builder().seed(123).inputShape(new int[] { 3, 750, 750 }).cudnnAlgoMode(AlgoMode.PREFER_FASTEST)
-				.numClasses(20).build();
+		Xception build = org.deeplearning4j.zoo.model.Xception.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
+				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 10000);
 	}
 
 	@GetMapping("/squeezenet")
 	public void testSqueezeNet() throws Exception {
-		SqueezeNet build = org.deeplearning4j.zoo.model.SqueezeNet.builder().seed(123).cudnnAlgoMode(AlgoMode.PREFER_FASTEST)
-				.inputShape(new int[] { 3, 750, 750 }).numClasses(20).build();
+		SqueezeNet build = org.deeplearning4j.zoo.model.SqueezeNet.builder().seed(123)
+				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).inputShape(new int[] { 3, 750, 750 }).numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 10000);
 	}
@@ -68,16 +103,16 @@ public class TestNetsApi {
 	@GetMapping("/lenet")
 	public void testLeNet() throws Exception {
 		// converges pretty fast
-		LeNet build = org.deeplearning4j.zoo.model.LeNet.builder().seed(123).inputShape(new int[] { 3, 750, 750 }).cudnnAlgoMode(AlgoMode.PREFER_FASTEST)
-				.numClasses(20).build();
+		LeNet build = org.deeplearning4j.zoo.model.LeNet.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
+				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).numClasses(20).build();
 		MultiLayerConfiguration net = build.conf();
 		runMultiLayerConfiguration(net, 10000);
 	}
 
 	@GetMapping("/darknet")
 	public void testDarknet() throws Exception {
-		Darknet19 build = org.deeplearning4j.zoo.model.Darknet19.builder().seed(123).cudnnAlgoMode(AlgoMode.PREFER_FASTEST)
-				.inputShape(new int[] { 3, 750, 750 }).numClasses(20).build();
+		Darknet19 build = org.deeplearning4j.zoo.model.Darknet19.builder().seed(123)
+				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).inputShape(new int[] { 3, 750, 750 }).numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 10000);
 	}

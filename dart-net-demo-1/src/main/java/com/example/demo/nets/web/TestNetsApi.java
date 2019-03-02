@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Random;
 
 import org.datavec.api.io.labels.ParentPathLabelGenerator;
@@ -20,11 +21,14 @@ import org.deeplearning4j.nn.conf.WorkspaceMode;
 import org.deeplearning4j.nn.conf.layers.ConvolutionLayer.AlgoMode;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
+import org.deeplearning4j.optimize.api.TrainingListener;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
+import org.deeplearning4j.optimize.listeners.EvaluativeListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.FileStatsStorage;
+import org.deeplearning4j.util.ModelSerializer;
 import org.deeplearning4j.zoo.model.Darknet19;
 import org.deeplearning4j.zoo.model.LeNet;
 import org.deeplearning4j.zoo.model.SqueezeNet;
@@ -62,7 +66,7 @@ public class TestNetsApi {
 		GoogLeNet lnet = new GoogLeNet(20, 123, WorkspaceMode.ENABLED);
 		lnet.setInputShape(shape);
 		ComputationGraph init = new ComputationGraph(lnet.conf());
-		runComputationGraph(init, 10000);
+		runComputationGraph(init, 10000, "googlenet");
 	}
 
 	@GetMapping("/vgg16")
@@ -71,7 +75,7 @@ public class TestNetsApi {
 		VGG16 build = org.deeplearning4j.zoo.model.VGG16.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
 				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).numClasses(20).build();
 		ComputationGraph init = build.init();
-		runComputationGraph(init, 10000);
+		runComputationGraph(init, 10000, "vgg16");
 	}
 
 	@GetMapping("/vgg19")
@@ -80,7 +84,7 @@ public class TestNetsApi {
 		VGG19 build = org.deeplearning4j.zoo.model.VGG19.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
 				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).numClasses(20).build();
 		ComputationGraph init = build.init();
-		runComputationGraph(init, 10000);
+		runComputationGraph(init, 10000, "vgg19");
 
 	}
 
@@ -90,7 +94,7 @@ public class TestNetsApi {
 		Xception build = org.deeplearning4j.zoo.model.Xception.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
 				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).numClasses(20).build();
 		ComputationGraph init = build.init();
-		runComputationGraph(init, 10000);
+		runComputationGraph(init, 10000, "xceptionnet");
 	}
 
 	@GetMapping("/squeezenet")
@@ -98,7 +102,7 @@ public class TestNetsApi {
 		SqueezeNet build = org.deeplearning4j.zoo.model.SqueezeNet.builder().seed(123)
 				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).inputShape(new int[] { 3, 750, 750 }).numClasses(20).build();
 		ComputationGraph init = build.init();
-		runComputationGraph(init, 10000);
+		runComputationGraph(init, 10000, "squeezenet");
 	}
 
 	@GetMapping("/lenet")
@@ -114,16 +118,23 @@ public class TestNetsApi {
 	public void testDarknet() throws Exception {
 		Darknet19 build = org.deeplearning4j.zoo.model.Darknet19.builder().seed(123)
 				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).inputShape(new int[] { 3, 750, 750 }).numClasses(20).build();
+
+		String label = "darknet";
+
 		ComputationGraph init = build.init();
-		runComputationGraph(init, 10000);
+		runComputationGraph(init, 4000, label);
 	}
 
-	private void runComputationGraph(ComputationGraph graph, int batches) throws Exception {
-		RunProvisioner p = new RunProvisioner(env.getProperty("dartnet.input", String.class), 750, 750, 3, 4, 20)
+	private void runComputationGraph(ComputationGraph graph, int batches, String label) throws Exception {
+		RunProvisioner p = new RunProvisioner(env.getProperty("dartnet.input", String.class), 750, 750, 3, 8, 20)
 				.withTerminateAfterBatches(batches);
-		graph = p.setup(graph);
+		graph = p.setup(graph, label);
+		Collection<TrainingListener> listeners = graph.getListeners();
+		listeners.add(new EvaluativeListener(p.getDataIterator(), 100));
+		graph.setListeners(listeners);
+
 		graph.fit(p.getDataIterator());
-		p.evaluateCg(graph);
+		p.evaluateCg(graph, label);
 	}
 
 	private void runMultiLayerConfiguration(MultiLayerConfiguration model, int batches) throws Exception {
@@ -264,9 +275,16 @@ public class TestNetsApi {
 					.build();
 		}
 
-		private ComputationGraph setup(ComputationGraph graph) throws Exception {
+		private ComputationGraph setup(ComputationGraph graph, String label) throws Exception {
 			startUiServer();
 			initReaders();
+
+			Path persistedModel = getPersistedModel(label);
+
+			if (Files.exists(persistedModel)) {
+				graph = ModelSerializer.restoreComputationGraph(persistedModel.toFile());
+			}
+
 			graph.setListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
 					checkpointListener());
 			return graph;
@@ -320,7 +338,7 @@ public class TestNetsApi {
 			return eval;
 		}
 
-		private void evaluateCg(ComputationGraph model) throws IOException {
+		private void evaluateCg(ComputationGraph model, String label) throws IOException {
 
 			Evaluation eval = prepareEval();
 
@@ -336,6 +354,15 @@ public class TestNetsApi {
 			}
 
 			log.info("Eval Stats : \r\n{}", eval.stats());
+
+			Path path = getPersistedModel(label);
+			ModelSerializer.writeModel(model, path.toFile(), true);
+
+		}
+
+		public Path getPersistedModel(String label) {
+			Path path = Paths.get(System.getProperty("user.dir"), label + "-model.zip");
+			return path;
 		}
 
 		private void evaluateMln(MultiLayerNetwork model) throws IOException {

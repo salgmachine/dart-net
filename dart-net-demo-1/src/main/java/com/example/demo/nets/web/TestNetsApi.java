@@ -82,7 +82,7 @@ public class TestNetsApi {
 	}
 
 	private void runComputationGraph(ComputationGraph graph, int batches) throws Exception {
-		RunProvisioner p = new RunProvisioner(env.getProperty("dartnet.input", String.class), 750, 750, 3, 1, 20)
+		RunProvisioner p = new RunProvisioner(env.getProperty("dartnet.input", String.class), 750, 750, 3, 4, 20)
 				.withTerminateAfterBatches(batches);
 		graph = p.setup(graph);
 		graph.fit(p.getDataIterator());
@@ -91,7 +91,7 @@ public class TestNetsApi {
 
 	private void runMultiLayerConfiguration(MultiLayerConfiguration model, int batches) throws Exception {
 
-		RunProvisioner p = new RunProvisioner(env.getProperty("dartnet.input"), 750, 750, 3, 1, 20)
+		RunProvisioner p = new RunProvisioner(env.getProperty("dartnet.input"), 750, 750, 3, 4, 20)
 				.withTerminateAfterBatches(batches);
 		MultiLayerNetwork multiLayerNetwork = new MultiLayerNetwork(model);
 		multiLayerNetwork = p.setup(multiLayerNetwork);

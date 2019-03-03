@@ -282,7 +282,7 @@ public class TestNetsApi {
 				log.info("Loaded Model from {}", persistedModel);
 			}
 			
-			graph.setListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
+			graph.addListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
 					new EvaluativeListener(getDataIterator(), 100), checkpointListener());
 
 			return graph;

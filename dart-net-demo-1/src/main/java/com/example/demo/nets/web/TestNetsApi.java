@@ -129,10 +129,6 @@ public class TestNetsApi {
 		RunProvisioner p = new RunProvisioner(env.getProperty("dartnet.input", String.class), 750, 750, 3, 4, 20)
 				.withTerminateAfterBatches(batches);
 		graph = p.setup(graph, label);
-		Collection<TrainingListener> listeners = graph.getListeners();
-		listeners.add(new EvaluativeListener(p.getDataIterator(), 100));
-		graph.setListeners(listeners);
-
 		graph.fit(p.getDataIterator());
 		p.evaluateCg(graph, label);
 	}
@@ -283,10 +279,11 @@ public class TestNetsApi {
 
 			if (Files.exists(persistedModel)) {
 				graph = ModelSerializer.restoreComputationGraph(persistedModel.toFile());
+				log.info("Loaded Model from {}", persistedModel);
 			}
 
 			graph.setListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
-					checkpointListener());
+					new EvaluativeListener(getDataIterator(), 100), checkpointListener());
 			return graph;
 
 		}

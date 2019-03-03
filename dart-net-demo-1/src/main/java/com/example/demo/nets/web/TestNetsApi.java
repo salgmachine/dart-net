@@ -283,7 +283,7 @@ public class TestNetsApi {
 			}
 			
 			graph.addListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
-					new EvaluativeListener(getDataIterator(), 100), checkpointListener());
+					new EvaluativeListener(new EarlyTerminationDataSetIterator(getDataIterator(), 10), 1000), checkpointListener());
 
 			return graph;
 

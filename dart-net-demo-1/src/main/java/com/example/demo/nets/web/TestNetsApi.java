@@ -267,7 +267,7 @@ public class TestNetsApi {
 		}
 
 		private CheckpointListener checkpointListener() {
-			return new CheckpointListener.Builder(modelDirectory().toFile()).keepLast(3).saveEveryNIterations(1000)
+			return new CheckpointListener.Builder(modelDirectory().toFile()).keepLast(3).saveEveryNIterations(120)
 					.build();
 		}
 
@@ -282,7 +282,7 @@ public class TestNetsApi {
 				log.info("Loaded Model from {}", persistedModel);
 			}
 
-			graph.setListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
+			graph.addListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
 					new EvaluativeListener(getDataIterator(), 100), checkpointListener());
 			return graph;
 

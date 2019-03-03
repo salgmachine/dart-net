@@ -281,9 +281,9 @@ public class TestNetsApi {
 				graph = ModelSerializer.restoreComputationGraph(persistedModel.toFile());
 				log.info("Loaded Model from {}", persistedModel);
 			}
-
+			
 			graph.setListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
-					checkpointListener());
+					new EvaluativeListener(getDataIterator(), 100), checkpointListener());
 
 			return graph;
 

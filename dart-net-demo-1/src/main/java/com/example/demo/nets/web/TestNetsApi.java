@@ -1,11 +1,15 @@
 package com.example.demo.nets.web;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.datavec.api.io.labels.ParentPathLabelGenerator;
@@ -21,7 +25,6 @@ import org.deeplearning4j.nn.conf.WorkspaceMode;
 import org.deeplearning4j.nn.conf.layers.ConvolutionLayer.AlgoMode;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
-import org.deeplearning4j.optimize.api.TrainingListener;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.EvaluativeListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
@@ -45,10 +48,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping("/nets")
 public class TestNetsApi {
@@ -114,15 +124,90 @@ public class TestNetsApi {
 		runMultiLayerConfiguration(net, 10000);
 	}
 
+	private ComputationGraph restoredDarknet;
+
+	public ComputationGraph getRestoredDarknet() {
+
+		if (restoredDarknet == null) {
+			Path path = getPersistedModel("darknet");
+			try {
+				this.restoredDarknet = ModelSerializer.restoreComputationGraph(path.toFile());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+		return restoredDarknet;
+	}
+
+	@PostMapping("/darknet")
+	public ResponseEntity<?> uploadTestImg(@RequestParam("file") MultipartFile file) {
+		log.info("received file {}", file);
+
+		ComputationGraph restoreComputationGraph = getRestoredDarknet();
+
+		if (restoreComputationGraph == null) {
+			return ResponseEntity.notFound().build();
+		}
+
+		try {
+
+			String name = file.getOriginalFilename();
+
+			String ft = name.substring(0, 4).split("_")[0];
+			List<String> labels = new ArrayList<>();
+			labels.add(ft);
+
+			Float score = evalImage(file, restoreComputationGraph, labels);
+			Map<String, Object> response = new HashMap<>();
+			response.put("score", score);
+			response.put("label", ft);
+			response.put("filename", name);
+
+			return ResponseEntity.ok(response);
+
+		} catch (Exception e) {
+			return ResponseEntity.status(500).body(e);
+		}
+
+	}
+
+	private Float evalImage(MultipartFile imageFile, ComputationGraph model, List<String> labels) throws IOException {
+		NativeImageLoader loader = new NativeImageLoader(750, 750, 3);
+		INDArray image = loader.asMatrix(convert(imageFile));
+		ImagePreProcessingScaler preProcessor = new ImagePreProcessingScaler(0, 1);
+		preProcessor.transform(image);
+		INDArray output = model.outputSingle(false, image);
+
+		return output.getFloat(0);
+	}
+
+	private File convert(MultipartFile file) throws IOException {
+		File convFile = new File(file.getOriginalFilename());
+		convFile.createNewFile();
+		FileOutputStream fos = new FileOutputStream(convFile);
+		fos.write(file.getBytes());
+		fos.close();
+		return convFile;
+	}
+
 	@GetMapping("/darknet")
 	public void testDarknet() throws Exception {
-		Darknet19 build = org.deeplearning4j.zoo.model.Darknet19.builder().seed(123)
-				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).inputShape(new int[] { 3, 750, 750 }).numClasses(20).build();
 
 		String label = "darknet";
 
-		ComputationGraph init = build.init();
-		runComputationGraph(init, 10000, label);
+		ComputationGraph mdl = getRestoredDarknet();
+		if (mdl == null) {
+			Darknet19 build = org.deeplearning4j.zoo.model.Darknet19.builder().seed(123)
+					.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).inputShape(new int[] { 3, 750, 750 }).numClasses(20)
+					.build();
+			mdl = build.init();
+		}else {
+			log.info("Restoring darknet model ..");
+		}
+
+		runComputationGraph(mdl, 10000, label);
 	}
 
 	private void runComputationGraph(ComputationGraph graph, int batches, String label) throws Exception {
@@ -194,7 +279,7 @@ public class TestNetsApi {
 		DataSetIterator getTestDataIterator() {
 			return testIter;
 		}
-		
+
 		DataSetIterator getDataIterator() {
 			return dataIterator;
 		}
@@ -235,13 +320,11 @@ public class TestNetsApi {
 			testFilesplit = new FileSplit(testData, NativeImageLoader.ALLOWED_FORMATS, new Random());
 
 			// Extract the parent path as the image label
-			 
 
 			recordReader = new ImageRecordReader(height, width, channels, new ParentPathLabelGenerator());
 			testRecordReader = new ImageRecordReader(height, width, channels, new ParentPathLabelGenerator());
 			testRecordReader.initialize(testFilesplit);
-			
-			
+
 			// Initialize the record reader
 			// add a listener, to extract the name
 			recordReader.initialize(train);
@@ -261,14 +344,13 @@ public class TestNetsApi {
 						recordReader.getLabels().size());
 				testIter = new RecordReaderDataSetIterator(testRecordReader, batchSize, 1,
 						testRecordReader.getLabels().size());
-						
+
 			} else {
 				dataIterator = new EarlyTerminationDataSetIterator(
 						new RecordReaderDataSetIterator(recordReader, batchSize, 1, recordReader.getLabels().size()),
 						terminateAfter);
-				testIter = new EarlyTerminationDataSetIterator(
-						new RecordReaderDataSetIterator(testRecordReader, batchSize, 1, testRecordReader.getLabels().size()),
-						terminateAfter);
+				testIter = new EarlyTerminationDataSetIterator(new RecordReaderDataSetIterator(testRecordReader,
+						batchSize, 1, testRecordReader.getLabels().size()), terminateAfter);
 			}
 
 			// Scale pixel values to 0-1
@@ -276,12 +358,10 @@ public class TestNetsApi {
 			scaler.fit(dataIterator);
 			dataIterator.setPreProcessor(scaler);
 
-			
 			DataNormalization testScaler = new ImagePreProcessingScaler(0, 1);
 			testScaler.fit(testIter);
 			testIter.setPreProcessor(testScaler);
-			 
-			
+
 			trainingLabels = dataIterator.getLabels().toString();
 			log.info("BUILD MODEL");
 		}
@@ -301,9 +381,10 @@ public class TestNetsApi {
 				graph = ModelSerializer.restoreComputationGraph(persistedModel.toFile());
 				log.info("Loaded Model from {}", persistedModel);
 			}
-			
+
 			graph.addListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
-					new EvaluativeListener(new EarlyTerminationDataSetIterator(getTestDataIterator(), 10), 1000), checkpointListener());
+					new EvaluativeListener(new EarlyTerminationDataSetIterator(getTestDataIterator(), 10), 1000),
+					checkpointListener());
 
 			return graph;
 
@@ -319,7 +400,9 @@ public class TestNetsApi {
 
 		private Evaluation prepareEval() throws IOException {
 			log.info("EVALUATE MODEL");
-		  
+			testRecordReader.reset();
+			testRecordReader.initialize(testFilesplit);
+			
 			/*
 			 * log the order of the labels for later use In previous versions the label
 			 * order was consistent, but random In current verions label order is
@@ -379,6 +462,12 @@ public class TestNetsApi {
 
 			log.info("Eval Stats : \r\n{}", eval.stats());
 		}
+	}
+
+	public Path getPersistedModel(String label) {
+		Path path = Paths.get(System.getProperty("user.dir"), label + "-model.zip");
+		log.info("Looking for persisted model at {}", path);
+		return path;
 	}
 
 }

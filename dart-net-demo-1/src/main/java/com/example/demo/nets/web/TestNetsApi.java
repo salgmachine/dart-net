@@ -122,7 +122,7 @@ public class TestNetsApi {
 		String label = "darknet";
 
 		ComputationGraph init = build.init();
-		runComputationGraph(init, 4000, label);
+		runComputationGraph(init, 10000, label);
 	}
 
 	private void runComputationGraph(ComputationGraph graph, int batches, String label) throws Exception {
@@ -158,6 +158,7 @@ public class TestNetsApi {
 		private String trainingLabels;
 		private FileSplit testFilesplit;
 		private ImageRecordReader recordReader;
+		private ImageRecordReader testRecordReader;
 		private DataSetIterator testIter;
 
 		private StatsStorage statsStorage;
@@ -190,6 +191,10 @@ public class TestNetsApi {
 			return statsStorage;
 		}
 
+		DataSetIterator getTestDataIterator() {
+			return testIter;
+		}
+		
 		DataSetIterator getDataIterator() {
 			return dataIterator;
 		}
@@ -230,10 +235,13 @@ public class TestNetsApi {
 			testFilesplit = new FileSplit(testData, NativeImageLoader.ALLOWED_FORMATS, new Random());
 
 			// Extract the parent path as the image label
-			ParentPathLabelGenerator labelMaker = new ParentPathLabelGenerator();
+			 
 
-			recordReader = new ImageRecordReader(height, width, channels, labelMaker);
-
+			recordReader = new ImageRecordReader(height, width, channels, new ParentPathLabelGenerator());
+			testRecordReader = new ImageRecordReader(height, width, channels, new ParentPathLabelGenerator());
+			testRecordReader.initialize(testFilesplit);
+			
+			
 			// Initialize the record reader
 			// add a listener, to extract the name
 			recordReader.initialize(train);
@@ -251,9 +259,15 @@ public class TestNetsApi {
 			if (terminateAfter == null) {
 				dataIterator = new RecordReaderDataSetIterator(recordReader, batchSize, 1,
 						recordReader.getLabels().size());
+				testIter = new RecordReaderDataSetIterator(testRecordReader, batchSize, 1,
+						testRecordReader.getLabels().size());
+						
 			} else {
 				dataIterator = new EarlyTerminationDataSetIterator(
 						new RecordReaderDataSetIterator(recordReader, batchSize, 1, recordReader.getLabels().size()),
+						terminateAfter);
+				testIter = new EarlyTerminationDataSetIterator(
+						new RecordReaderDataSetIterator(testRecordReader, batchSize, 1, testRecordReader.getLabels().size()),
 						terminateAfter);
 			}
 
@@ -262,6 +276,12 @@ public class TestNetsApi {
 			scaler.fit(dataIterator);
 			dataIterator.setPreProcessor(scaler);
 
+			
+			DataNormalization testScaler = new ImagePreProcessingScaler(0, 1);
+			testScaler.fit(testIter);
+			testIter.setPreProcessor(testScaler);
+			 
+			
 			trainingLabels = dataIterator.getLabels().toString();
 			log.info("BUILD MODEL");
 		}
@@ -283,7 +303,7 @@ public class TestNetsApi {
 			}
 			
 			graph.addListeners(new ScoreIterationListener(5), new StatsListener(getStatsStorage()),
-					new EvaluativeListener(new EarlyTerminationDataSetIterator(getDataIterator(), 10), 1000), checkpointListener());
+					new EvaluativeListener(new EarlyTerminationDataSetIterator(getTestDataIterator(), 10), 1000), checkpointListener());
 
 			return graph;
 
@@ -299,35 +319,14 @@ public class TestNetsApi {
 
 		private Evaluation prepareEval() throws IOException {
 			log.info("EVALUATE MODEL");
-			recordReader.reset();
-
-			// The model trained on the training dataset split
-			// now that it has trained we evaluate against the
-			// test data of images the network has not seen
-
-			recordReader.initialize(testFilesplit);
-
-			RecordReaderDataSetIterator testDataReader = new RecordReaderDataSetIterator(recordReader, batchSize, 1,
-					classes);
-
-			if (terminateAfter == null) {
-				testIter = testDataReader;
-			} else {
-				testIter = new EarlyTerminationDataSetIterator(testDataReader, terminateAfter);
-			}
-
-			DataNormalization scaler = new ImagePreProcessingScaler(0, 1);
-
-			scaler.fit(testIter);
-			testIter.setPreProcessor(scaler);
-
+		  
 			/*
 			 * log the order of the labels for later use In previous versions the label
 			 * order was consistent, but random In current verions label order is
 			 * lexicographic preserving the RecordReader Labels order is no longer needed
 			 * left in for demonstration purposes
 			 */
-			String testlabels = recordReader.getLabels().toString();
+			String testlabels = testRecordReader.getLabels().toString();
 
 			log.info("Test labels : {}", testlabels);
 

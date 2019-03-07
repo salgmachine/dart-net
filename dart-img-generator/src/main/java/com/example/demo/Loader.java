@@ -1,26 +1,28 @@
 package com.example.demo;
 
-import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.BufferedImageOp;
+import java.awt.image.ColorConvertOp;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
 
 import org.imgscalr.Scalr;
 import org.imgscalr.Scalr.Method;
+import org.imgscalr.Scalr.Rotation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.env.Environment;
@@ -80,8 +82,11 @@ public class Loader {
 
 					int start = 180;
 					int max = 680;
+					int stepsize = 20;
 					
-					for (int i = start; i <= max; i++) {
+					for (int i = start; i <= max; ) {
+						i = i + stepsize;
+						
 						final int idx = i;
 						Observable<Boolean> f = Observable.fromCallable(() -> {
 							writeImg(rotatedImg, watermark, w, h, combined, initialWidth, basePointWidth, idx, prefix,
@@ -148,8 +153,17 @@ public class Loader {
 		ImageIO.write(finalImg, "PNG", filepath.toFile());
 	}
 
+	
 	private BufferedImage resizeImageAndGrayscale(BufferedImage img) {
-		return Scalr.resize(img, Method.AUTOMATIC, (int) (img.getWidth() * 0.5), (int) (img.getHeight() * 0.5));
+		int rnd = new Random().nextInt(340);
+		BufferedImage result = Scalr.resize(img, Method.AUTOMATIC, 448, 448); 
+		if(rnd % 3 == 0) {
+			result = rotateImage(result, rnd);
+		}
+		if(rnd % 7 == 0) {
+			result = Scalr.rotate(result, Rotation.FLIP_HORZ);
+		}
+		return result;
 	}
 
 	private BufferedImage rotateImage(BufferedImage sourceImage, double angle) {

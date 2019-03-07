@@ -20,11 +20,17 @@ import org.datavec.image.recordreader.ImageRecordReader;
 import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.datasets.iterator.EarlyTerminationDataSetIterator;
+import org.deeplearning4j.nn.api.Model;
+import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.WorkspaceMode;
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.conf.layers.ConvolutionLayer.AlgoMode;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
+import org.deeplearning4j.nn.transferlearning.FineTuneConfiguration;
+import org.deeplearning4j.nn.transferlearning.TransferLearning;
+import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.EvaluativeListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
@@ -32,6 +38,7 @@ import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.FileStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
+import org.deeplearning4j.zoo.PretrainedType;
 import org.deeplearning4j.zoo.model.Darknet19;
 import org.deeplearning4j.zoo.model.LeNet;
 import org.deeplearning4j.zoo.model.SqueezeNet;
@@ -39,11 +46,13 @@ import org.deeplearning4j.zoo.model.VGG16;
 import org.deeplearning4j.zoo.model.VGG19;
 import org.deeplearning4j.zoo.model.Xception;
 import org.nd4j.evaluation.classification.Evaluation;
+import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
+import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -91,8 +100,10 @@ public class TestNetsApi {
 	@GetMapping("/vgg19")
 	public void testVGG19() throws Exception {
 		// runs into NAN
-		VGG19 build = org.deeplearning4j.zoo.model.VGG19.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
+		VGG19 build = org.deeplearning4j.zoo.model.VGG19.builder().seed(123).inputShape(new int[] { 3, 480, 480 })
 				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).numClasses(20).build();
+		// Model mm = build.initPretrained(PretrainedType.IMAGENET);
+		// ComputationGraph init = (ComputationGraph) mm;
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 10000, "vgg19");
 
@@ -101,7 +112,7 @@ public class TestNetsApi {
 	@GetMapping("/xceptionnet")
 	public void testXceptionNet() throws Exception {
 		// 121 layer oO .. produces high load even on single batches
-		Xception build = org.deeplearning4j.zoo.model.Xception.builder().seed(123).inputShape(new int[] { 3, 750, 750 })
+		Xception build = org.deeplearning4j.zoo.model.Xception.builder().seed(123).inputShape(new int[] { 3, 480, 480 })
 				.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 10000, "xceptionnet");
@@ -200,10 +211,23 @@ public class TestNetsApi {
 		ComputationGraph mdl = getRestoredDarknet();
 		if (mdl == null) {
 			Darknet19 build = org.deeplearning4j.zoo.model.Darknet19.builder().seed(123)
-					.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).inputShape(new int[] { 3, 750, 750 }).numClasses(20)
+					.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).inputShape(new int[] { 3, 448, 448 }).numClasses(20)
 					.build();
-			mdl = build.init();
-		}else {
+//			 mdl = build.init();
+			mdl = (ComputationGraph) build.initPretrained();
+
+			FineTuneConfiguration ft = new FineTuneConfiguration.Builder()
+					.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).seed(123).build();
+			ComputationGraph newModel = new TransferLearning.GraphBuilder(mdl).fineTuneConfiguration(ft)
+					.removeVertexAndConnections("softmax")
+					.removeVertexAndConnections("loss")
+					.addLayer("output",
+							new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD).nOut(20).nIn(1000)
+									.weightInit(WeightInit.XAVIER).activation(Activation.SOFTMAX).build(),
+							"globalpooling").setOutputs("output")
+					.build();
+			mdl = newModel;
+		} else {
 			log.info("Restoring darknet model ..");
 		}
 
@@ -211,7 +235,7 @@ public class TestNetsApi {
 	}
 
 	private void runComputationGraph(ComputationGraph graph, int batches, String label) throws Exception {
-		RunProvisioner p = new RunProvisioner(env.getProperty("dartnet.input", String.class), 750, 750, 3, 2, 20)
+		RunProvisioner p = new RunProvisioner(env.getProperty("dartnet.input", String.class), 448, 448, 3, 2, 20)
 				.withTerminateAfterBatches(batches);
 		graph = p.setup(graph, label);
 		graph.fit(p.getDataIterator(), 2);
@@ -402,7 +426,7 @@ public class TestNetsApi {
 			log.info("EVALUATE MODEL");
 			testRecordReader.reset();
 			testRecordReader.initialize(testFilesplit);
-			
+
 			/*
 			 * log the order of the labels for later use In previous versions the label
 			 * order was consistent, but random In current verions label order is

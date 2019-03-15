@@ -183,26 +183,81 @@ public class Loader {
 		String[] fpath = path.toFile().getAbsolutePath().split("\\.");
 
 		MarvinImage originalImage = new MarvinImage(img, "PNG");
-		MarvinImage image = originalImage.clone();
 
-		blackAndWhite(image, 50);
-		MarvinImageIO.saveImage(image, fpath[0] + "_bw." + fpath[1]);
+		Observable<Boolean> bw = Observable.fromCallable(() -> {
+			return originalImage.clone();
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				blackAndWhite(mi, 50);
+				return mi;
+			});
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				MarvinImageIO.saveImage(mi, fpath[0] + "_bw." + fpath[1]);
+				return true;
+			});
+		}).subscribeOn(Schedulers.io());
 
-		image = originalImage.clone();
-		halftoneDithering(originalImage, image);
-		MarvinImageIO.saveImage(image, fpath[0] + "_dt." + fpath[1]);
+		Observable<Boolean> dt = Observable.fromCallable(() -> {
+			return originalImage.clone();
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				halftoneDithering(originalImage, mi);
+				return mi;
+			});
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				MarvinImageIO.saveImage(mi, fpath[0] + "_dt." + fpath[1]);
+				return true;
+			});
+		}).subscribeOn(Schedulers.io());
 
-		image = originalImage.clone();
-		morphologicalDilation(originalImage, image, new boolean[][] { { true, true }, { true, false } });
-		MarvinImageIO.saveImage(image, fpath[0] + "_dl." + fpath[1]);
+		Observable<Boolean> dl = Observable.fromCallable(() -> {
+			return originalImage.clone();
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				morphologicalDilation(originalImage, mi, new boolean[][] { { true, true }, { true, false } });
+				return mi;
+			});
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				MarvinImageIO.saveImage(mi, fpath[0] + "_dl." + fpath[1]);
+				return true;
+			});
+		}).subscribeOn(Schedulers.io());
 
-		image = originalImage.clone();
-		morphologicalErosion(originalImage, image, new boolean[][] { { true, true }, { true, false } });
-		MarvinImageIO.saveImage(image, fpath[0] + "_er." + fpath[1]);
+		Observable<Boolean> er = Observable.fromCallable(() -> {
+			return originalImage.clone();
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				morphologicalErosion(originalImage, mi, new boolean[][] { { true, true }, { true, false } });
+				return mi;
+			});
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				MarvinImageIO.saveImage(mi, fpath[0] + "_er." + fpath[1]);
+				return true;
+			});
+		}).subscribeOn(Schedulers.io());
 
-		image = originalImage.clone();
-		invertColors(originalImage, image);
-		MarvinImageIO.saveImage(image, fpath[0] + "_ic." + fpath[1]);
+		Observable<Boolean> ic = Observable.fromCallable(() -> {
+			return originalImage.clone();
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				invertColors(originalImage, mi);
+				return mi;
+			});
+		}).flatMap(mi -> {
+			return Observable.fromCallable(() -> {
+				MarvinImageIO.saveImage(mi, fpath[0] + "_ic." + fpath[1]);
+				return true;
+			});
+		}).subscribeOn(Schedulers.io());
+
+		Observable.zip(ic, er, dl, dt, bw, (fst, snd, trd, fth, ftf) -> {
+			return true;
+		}).blockingSubscribe(nxt -> {
+		});
 
 	}
 

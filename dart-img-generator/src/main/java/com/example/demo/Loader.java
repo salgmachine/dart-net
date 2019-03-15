@@ -93,9 +93,9 @@ public class Loader {
 
 					final int r = rot;
 
-					int start = 200; // 180
-					int max = 300; // 680
-					int stepsize = 1;
+					int start = 180; // 180
+					int max = 680; // 680
+					int stepsize = 3;
 
 					for (int i = start; i <= max;) {
 						i = i + stepsize;

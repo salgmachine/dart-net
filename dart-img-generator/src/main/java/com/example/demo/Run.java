@@ -1,5 +1,7 @@
 package com.example.demo;
 
+import java.io.IOException;
+
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,7 +20,11 @@ public class Run {
 	}
 
 	public Run execute(Loader loader) {
-		loader.addWatermark(getPrefix(), getRotateMin(), getRotateMax());
+		try {
+			loader.addWatermark(getPrefix(), getRotateMin(), getRotateMax());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		return this;
 	}
 

@@ -1,11 +1,17 @@
 package com.example.demo;
 
+import static marvinplugins.MarvinPluginCollection.blackAndWhite;
+import static marvinplugins.MarvinPluginCollection.halftoneDithering;
+import static marvinplugins.MarvinPluginCollection.histogramEqualization;
+import static marvinplugins.MarvinPluginCollection.invertColors;
+import static marvinplugins.MarvinPluginCollection.morphologicalDilation;
+import static marvinplugins.MarvinPluginCollection.morphologicalErosion;
+
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.awt.image.BufferedImageOp;
-import java.awt.image.ColorConvertOp;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,7 +28,6 @@ import javax.imageio.ImageIO;
 
 import org.imgscalr.Scalr;
 import org.imgscalr.Scalr.Method;
-import org.imgscalr.Scalr.Rotation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.env.Environment;
@@ -35,6 +40,9 @@ import com.google.common.collect.Lists;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
+import marvin.image.MarvinImage;
+import marvin.io.MarvinImageIO;
+import marvin.util.MarvinImageUtils;
 
 @Slf4j
 @Component
@@ -46,19 +54,24 @@ public class Loader {
 	@Autowired
 	private ApplicationEventPublisher publisher;
 
-	public void addWatermark(String prefix, int rotateMin, int rotateMax) {
+	public void addWatermark(String prefix, int rotateMin, int rotateMax) throws IOException {
+
+		Resource watermarkRes = loader.getResource("classpath:dart3.png");
+		BufferedImage watermarkImg = ImageIO.read(watermarkRes.getInputStream());
+
+		List<String> asList = Arrays.asList("classpath:board3.png", "classpath:board-5.png", "classpath:board6.png");
 
 		List<Observable<Boolean>> collect = IntStream.range(rotateMin, rotateMax + 1).boxed().map(rot -> {
 			return Observable.fromCallable(() -> {
 				try {
 
-					Resource boardRes = loader.getResource("classpath:board3.png");
-					Resource watermarkRes = loader.getResource("classpath:dart3.png");
-
-					BufferedImage watermarkImg = ImageIO.read(watermarkRes.getInputStream());
 					// watermarkImg = Scalr.resize(watermarkImg, Method.AUTOMATIC, 64, 64);
 
 					final BufferedImage watermark = watermarkImg;
+
+					String boardImgPath = asList.get(new Random().nextInt(3));
+
+					Resource boardRes = loader.getResource(boardImgPath);
 
 					BufferedImage boardImg = ImageIO.read(boardRes.getInputStream());
 					boardImg = rotateImage(boardImg, rot);
@@ -80,13 +93,13 @@ public class Loader {
 
 					final int r = rot;
 
-					int start = 180;
-					int max = 680;
-					int stepsize = 20;
-					
-					for (int i = start; i <= max; ) {
+					int start = 200; // 180
+					int max = 300; // 680
+					int stepsize = 1;
+
+					for (int i = start; i <= max;) {
 						i = i + stepsize;
-						
+
 						final int idx = i;
 						Observable<Boolean> f = Observable.fromCallable(() -> {
 							writeImg(rotatedImg, watermark, w, h, combined, initialWidth, basePointWidth, idx, prefix,
@@ -133,36 +146,73 @@ public class Loader {
 
 		Graphics g = combined.getGraphics();
 		g.drawImage(image, 0, 0, null);
-		
-		
+
 		int drawOverlayAtX = x - (overlay.getWidth() / 2);
 		int drawOverlayAtY = y - overlay.getHeight();
-		
-		int rgb = image.getRGB(drawOverlayAtX, drawOverlayAtY);
-		
-		g.drawImage(overlay, drawOverlayAtX, drawOverlayAtY, null);
-		String fname = prefix + "_(x" + x + " y" + y + " rot" + rotate + " color"+rgb+")_" + UUID.randomUUID().toString() + ".png";
 
-		log.info(" Drawing overlay at x=" + x + " y=" + y + " at rotate=" + rotate + " for " + fname);
+		if (idx % 2 == 0) {
+			// overlay = rotateImage(overlay, 180);
+		}
+
+		g.drawImage(overlay, drawOverlayAtX, drawOverlayAtY, null);
+		String fname = prefix + "_(x" + x + " y" + y + " rot" + rotate + ")_" + UUID.randomUUID().toString() + ".png";
+
+		// log.info(" Drawing overlay at x=" + x + " y=" + y + " at rotate=" + rotate +
+		// " for " + fname);
 
 		combined = rotateImage(combined, 360 - rotate);
+
 		Path filepath = Paths.get(outPath.toFile().getAbsolutePath(), fname);
 		publisher.publishEvent(new ImgWrittenEvent(filepath, new Date(), isTestImg, prefix));
 
-		final BufferedImage finalImg = resizeImageAndGrayscale(combined);
+		BufferedImage finalImg = postProcess(combined);
+
+		BufferedImage copy = new BufferedImage(finalImg.getWidth(), finalImg.getHeight(), BufferedImage.TYPE_INT_RGB);
+		Graphics2D g2d = copy.createGraphics();
+		g2d.setColor(Color.WHITE); // Or what ever fill color you want...
+		g2d.fillRect(0, 0, copy.getWidth(), copy.getHeight());
+		g2d.drawImage(finalImg, 0, 0, null);
+		g2d.dispose();
+
 		ImageIO.write(finalImg, "PNG", filepath.toFile());
+		transformImg(finalImg, filepath);
 	}
 
-	
-	private BufferedImage resizeImageAndGrayscale(BufferedImage img) {
+	private void transformImg(BufferedImage img, Path path) {
+
+		String[] fpath = path.toFile().getAbsolutePath().split("\\.");
+
+		MarvinImage originalImage = new MarvinImage(img, "PNG");
+		MarvinImage image = originalImage.clone();
+
+		blackAndWhite(image, 50);
+		MarvinImageIO.saveImage(image, fpath[0] + "_bw." + fpath[1]);
+
+		image = originalImage.clone();
+		halftoneDithering(originalImage, image);
+		MarvinImageIO.saveImage(image, fpath[0] + "_dt." + fpath[1]);
+
+		image = originalImage.clone();
+		morphologicalDilation(originalImage, image, new boolean[][] { { true, true }, { true, false } });
+		MarvinImageIO.saveImage(image, fpath[0] + "_dl." + fpath[1]);
+
+		image = originalImage.clone();
+		morphologicalErosion(originalImage, image, new boolean[][] { { true, true }, { true, false } });
+		MarvinImageIO.saveImage(image, fpath[0] + "_er." + fpath[1]);
+
+		image = originalImage.clone();
+		invertColors(originalImage, image);
+		MarvinImageIO.saveImage(image, fpath[0] + "_ic." + fpath[1]);
+
+	}
+
+	private BufferedImage postProcess(BufferedImage img) {
 		int rnd = new Random().nextInt(340);
-		BufferedImage result = Scalr.resize(img, Method.AUTOMATIC, 448, 448); 
-		if(rnd % 3 == 0) {
-			result = rotateImage(result, rnd);
-		}
-		if(rnd % 7 == 0) {
-			result = Scalr.rotate(result, Rotation.FLIP_HORZ);
-		}
+		BufferedImage result = Scalr.resize(img, Method.SPEED, 448, 448);
+
+//		if(rnd % 3 == 0) {
+//			result = rotateImage(result, rnd);
+//		} 
 		return result;
 	}
 

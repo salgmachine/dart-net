@@ -185,7 +185,7 @@ public class TestNetsApi {
 	}
 
 	private Float evalImage(MultipartFile imageFile, ComputationGraph model, List<String> labels) throws IOException {
-		NativeImageLoader loader = new NativeImageLoader(750, 750, 3);
+		NativeImageLoader loader = new NativeImageLoader(448, 448, 3);
 		INDArray image = loader.asMatrix(convert(imageFile));
 		ImagePreProcessingScaler preProcessor = new ImagePreProcessingScaler(0, 1);
 		preProcessor.transform(image);
@@ -213,20 +213,21 @@ public class TestNetsApi {
 			Darknet19 build = org.deeplearning4j.zoo.model.Darknet19.builder().seed(123)
 					.cudnnAlgoMode(AlgoMode.PREFER_FASTEST).inputShape(new int[] { 3, 448, 448 }).numClasses(20)
 					.build();
-//			 mdl = build.init();
-			mdl = (ComputationGraph) build.initPretrained();
+			 mdl = build.init();
+			 
+//			mdl = (ComputationGraph) build.initPretrained();
 
-			FineTuneConfiguration ft = new FineTuneConfiguration.Builder()
-					.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).seed(123).build();
-			ComputationGraph newModel = new TransferLearning.GraphBuilder(mdl).fineTuneConfiguration(ft)
-					.removeVertexAndConnections("softmax")
-					.removeVertexAndConnections("loss")
-					.addLayer("output",
-							new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD).nOut(20).nIn(1000)
-									.weightInit(WeightInit.XAVIER).activation(Activation.SOFTMAX).build(),
-							"globalpooling").setOutputs("output")
-					.build();
-			mdl = newModel;
+//			FineTuneConfiguration ft = new FineTuneConfiguration.Builder()
+//					.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).seed(123).build();
+//			ComputationGraph newModel = new TransferLearning.GraphBuilder(mdl).fineTuneConfiguration(ft)
+//					.removeVertexAndConnections("softmax")
+//					.removeVertexAndConnections("loss")
+//					.addLayer("output",
+//							new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD).nOut(20).nIn(1000)
+//									.weightInit(WeightInit.XAVIER).activation(Activation.SOFTMAX).build(),
+//							"globalpooling").setOutputs("output")
+//					.build();
+//			mdl = newModel;
 		} else {
 			log.info("Restoring darknet model ..");
 		}

@@ -12,15 +12,11 @@ import org.datavec.image.recordreader.ImageRecordReader;
 import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.datasets.iterator.EarlyTerminationDataSetIterator;
-import org.deeplearning4j.nn.api.OptimizationAlgorithm;
+import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
-import org.deeplearning4j.nn.conf.layers.OutputLayer;
+import org.deeplearning4j.nn.conf.WorkspaceMode;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
-import org.deeplearning4j.nn.transferlearning.FineTuneConfiguration;
-import org.deeplearning4j.nn.transferlearning.TransferLearning;
-import org.deeplearning4j.nn.transferlearning.TransferLearning.Builder;
-import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.ui.api.UIServer;
@@ -40,21 +36,18 @@ import org.deeplearning4j.zoo.model.Xception;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.nd4j.evaluation.classification.Evaluation;
-import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
-import org.nd4j.linalg.learning.config.Nesterovs;
-import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Dl4jNetTest {
 
 	private Logger log = LoggerFactory.getLogger(getClass());
-	
+
 	@Test
 	@Ignore
 	public void testSimpleCNNNet() throws Exception {
@@ -62,16 +55,16 @@ public class Dl4jNetTest {
 		SimpleCNN build = org.deeplearning4j.zoo.model.SimpleCNN.builder().seed(123)
 				.inputShape(new int[] { 3, 128, 128 }).numClasses(20).build();
 		MultiLayerConfiguration net = build.conf();
-		
+
 		runMultiLayerConfiguration(net, 100);
 	}
-	
+
 	@Test
 	@Ignore
 	public void testNASNet() throws Exception {
-		//invalid
-		NASNet build = org.deeplearning4j.zoo.model.NASNet.builder().seed(123)
-				.inputShape(new int[] { 3, 128, 128 }).numClasses(20).build();
+		// invalid
+		NASNet build = org.deeplearning4j.zoo.model.NASNet.builder().seed(123).inputShape(new int[] { 3, 128, 128 })
+				.numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 500);
 	}
@@ -79,33 +72,32 @@ public class Dl4jNetTest {
 	@Test
 	@Ignore
 	public void testAlexNet() throws Exception {
-		// invalid .. 
-		AlexNet build = org.deeplearning4j.zoo.model.AlexNet.builder().seed(123)
-				.inputShape(new int[] { 3, 128, 128 }).numClasses(20).build();
+		// invalid ..
+		AlexNet build = org.deeplearning4j.zoo.model.AlexNet.builder().seed(123).inputShape(new int[] { 3, 128, 128 })
+				.numClasses(20).build();
 		MultiLayerConfiguration net = build.conf();
 		runMultiLayerConfiguration(net, 100);
 	}
-	
-	
+
 	@Test
 	public void testXceptionNet() throws Exception {
 		// 121 layer oO .. produces high load even on single batches
-		Xception build = org.deeplearning4j.zoo.model.Xception.builder().seed(123)
-				.inputShape(new int[] { 3, 128, 128 }).numClasses(20).build();
+		Xception build = org.deeplearning4j.zoo.model.Xception.builder().seed(123).inputShape(new int[] { 3, 128, 128 })
+				.numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 500);
 	}
-	
+
 	@Test
 	@Ignore
 	public void testUNet() throws Exception {
 		// invalid
-		UNet build = org.deeplearning4j.zoo.model.UNet.builder().seed(123)
-				.inputShape(new int[] { 3, 128, 128 }).numClasses(20).build();
+		UNet build = org.deeplearning4j.zoo.model.UNet.builder().seed(123).inputShape(new int[] { 3, 128, 128 })
+				.numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 500);
 	}
-	
+
 	@Test
 	public void testSqueezeNet() throws Exception {
 		SqueezeNet build = org.deeplearning4j.zoo.model.SqueezeNet.builder().seed(123)
@@ -157,11 +149,23 @@ public class Dl4jNetTest {
 				.numClasses(20).build();
 		ComputationGraph init = build.init();
 		runComputationGraph(init, 100);
+	}
+
+	@Test
+	public void testGoogLeNet() {
+		GoogLeNet n = new GoogLeNet(20, 123, WorkspaceMode.NONE);
+		ComputationGraphConfiguration conf = n.conf();
+		try {
+			runComputationGraph(new ComputationGraph(conf), 3000);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 	}
 
 	private void runComputationGraph(ComputationGraph graph, int batches) throws Exception {
-		RunProvisioner p = new RunProvisioner("D:/development/dart-net/images/dart-net", 128, 128, 3, 1, 20)
+		RunProvisioner p = new RunProvisioner("/media/data/development/dart-net/dart-net", 448, 448, 3, 1, 20)
 				.withTerminateAfterBatches(batches);
 		graph = p.setup(graph);
 		graph.fit(p.getDataIterator());
@@ -202,7 +206,7 @@ public class Dl4jNetTest {
 			UIServer uiServer = UIServer.getInstance();
 			// Configure where the network information (gradients, score vs. time etc) is to
 			// be stored. Here: store in memory.
-			statsStorage = new FileStatsStorage(new File("D:/development/dart-net/stats")); // Alternative: new
+			statsStorage = new FileStatsStorage(new File("/media/data/development/dart-net/stats")); // Alternative: new
 																							// FileStatsStorage(File),
 																							// for
 			// saving
